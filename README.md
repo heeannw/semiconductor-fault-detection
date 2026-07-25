@@ -181,9 +181,9 @@ SQLite 스키마: `process_logs`, `fault_records`, `model_metrics`
 
 ## 🚀 진행 상황
 
-- [ ] GitHub 레포 생성
-- [ ] SECOM 데이터 다운로드
+- [x] GitHub 레포 생성
+- [x] SECOM 데이터 다운로드 (`data/raw/`, git 미추적)
 - [ ] 논문 PDF 저장
-- [ ] EDA 시작 (`notebooks/`)
-- [ ] 결측값 패턴 확인, 결측률 50% 초과 피처 목록화
-- [ ] 클래스 분포 확인
+- [x] EDA 시작 (`notebooks/01_eda.ipynb`)
+- [x] 결측값 패턴 확인, 결측률 50% 초과 피처 목록화 — 590개 중 28개 피처가 결측률 50% 초과
+- [x] 클래스 분포 확인 — 정상(Pass) 1463 / 불량(Fail) 104 (93.36% / 6.64%)
