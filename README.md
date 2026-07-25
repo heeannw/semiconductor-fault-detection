@@ -157,6 +157,13 @@ POST   /api/model/retrain      모델 재학습
 GET    /api/health             서버 상태 확인
 ```
 
+추가 (원래 11개 목록에는 없었으나, 5주차 대시보드의 "모델별 비교"/"피처 중요도" 화면을 위해 필요해 추가):
+
+```
+GET    /api/model/metrics             모델 성능 이력 (model_metrics 테이블)
+GET    /api/model/feature-importance  XGBoost 피처 중요도 상위 N개
+```
+
 SQLite 스키마: `process_logs`, `fault_records`, `model_metrics`
 
 #### 구현 메모
@@ -172,6 +179,14 @@ SQLite 스키마: `process_logs`, `fault_records`, `model_metrics`
 2. 공정 시뮬레이터 화면 (8대 공정 파이프라인 시각화)
 3. 이상 탐지 결과 화면 (피처 중요도, 모델별 비교)
 4. 이력 관리 화면 (이상 이력, 수율 트렌드, 모델 성능 지표)
+
+#### 구현 메모
+
+- Vite + React + `react-router-dom` + `recharts`. (원안의 Chart.js는 생략 — 하나의 차팅 라이브러리로 요구되는 차트를 전부 커버할 수 있어 굳이 두 개를 함께 쓰지 않았다.)
+- `src/api/client.js`가 백엔드(`http://localhost:8000`)를 호출하는 유일한 지점. CORS는 Vite 기본 포트(5173)와 원안 기준 CRA 포트(3000)를 모두 허용하도록 백엔드에 설정.
+- 이상 탐지 결과 화면은 `X_test.csv`에서 뽑은 실제 SECOM 샘플 3종(정상 / 모델이 탐지한 불량 / 모델이 놓친 불량)을 `src/data/secomSamples.js`에 고정 fixture로 내장해 데모 — 562차원 피처를 사람이 직접 입력할 수 없기 때문.
+- 로컬 실행: `cd frontend && npm install && npm run dev` (백엔드가 8000번 포트에 떠 있어야 함).
+- 브라우저에서 4개 화면 전부 수동 테스트 완료: 시뮬레이션 실행 → 대시보드/시뮬레이터 화면 갱신, 탐지 실행 → 모델별 비교 카드, 알림 발송 → 상태 변경, 재학습 → 이력 테이블에 새 행 추가.
 
 ### 6주차: 마무리 + 배포
 
@@ -209,4 +224,5 @@ SQLite 스키마: `process_logs`, `fault_records`, `model_metrics`
 - [x] 전처리 완료 (`notebooks/02_preprocessing.ipynb`) — 결측률 50% 초과 피처 제거, 중앙값 대체, 저분산 피처 제거, StandardScaler, SMOTE(train만) → `data/processed/`
 - [x] 공정 시뮬레이터 구현 (`simulator/process_simulator.py`) — 8대 공정 파라미터 정상 범위 기반 합성 데이터 생성, 이상 비율 10%로 정상 범위 이탈 값 생성
 - [x] AI 모델 구현 (`notebooks/03_modeling.ipynb`) — Isolation Forest + XGBoost 앙상블, 5-fold OOF로 분류 임계값 튜닝, `models/`에 저장 (F1/AUROC는 위 로드맵 3주차 표 참고)
-- [x] FastAPI 서버 구현 (`backend/`) — 11개 엔드포인트, `process_logs`/`fault_records`/`model_metrics` SQLite 스키마, 전 엔드포인트 curl 스모크 테스트 완료
+- [x] FastAPI 서버 구현 (`backend/`) — 11개 엔드포인트 + 추가 2개(`/api/model/metrics`, `/api/model/feature-importance`), `process_logs`/`fault_records`/`model_metrics` SQLite 스키마, 전 엔드포인트 curl 스모크 테스트 완료
+- [x] React 대시보드 구현 (`frontend/`) — 4개 화면(메인/시뮬레이터/탐지/이력), 브라우저에서 전 화면 수동 테스트 완료

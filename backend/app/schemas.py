@@ -76,6 +76,23 @@ class RetrainResponse(BaseModel):
     trained_at: datetime
 
 
+class ModelMetricOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    model_name: str
+    precision: float
+    recall: float
+    f1: float
+    auroc: float
+    trained_at: datetime
+
+
+class FeatureImportanceOut(BaseModel):
+    features: list[str]
+    importances: list[float]
+
+
 class HealthResponse(BaseModel):
     status: str
     models_loaded: bool

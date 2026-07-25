@@ -22,7 +22,9 @@ from .schemas import (  # noqa: E402
     AlertSendResponse,
     DetectResponse,
     FaultRecordOut,
+    FeatureImportanceOut,
     HealthResponse,
+    ModelMetricOut,
     ProcessLogOut,
     RetrainResponse,
     SecomDetectRequest,
@@ -44,7 +46,10 @@ app = FastAPI(title="SemiSense API", version="0.1.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=[
+        "http://localhost:3000", "http://127.0.0.1:3000",  # CRA 기본 포트 (설계 문서 기준)
+        "http://localhost:5173", "http://127.0.0.1:5173",  # Vite 기본 포트 (실제 사용 중인 프론트엔드 dev 서버)
+    ],
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -214,6 +219,24 @@ def model_retrain(db: Session = Depends(get_db)):
     db.refresh(record)
 
     return RetrainResponse(**metrics, trained_at=record.trained_at)
+
+
+@app.get("/api/model/metrics", response_model=list[ModelMetricOut])
+def model_metrics(limit: int = 20, db: Session = Depends(get_db)):
+    return (
+        db.query(ModelMetric)
+        .order_by(ModelMetric.trained_at.desc())
+        .limit(limit)
+        .all()
+    )
+
+
+@app.get("/api/model/feature-importance", response_model=FeatureImportanceOut)
+def model_feature_importance(top_n: int = 20):
+    try:
+        return ml.top_feature_importance(top_n)
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=503, detail=str(e))
 
 
 @app.get("/api/health", response_model=HealthResponse)

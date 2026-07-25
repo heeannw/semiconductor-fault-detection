@@ -48,6 +48,15 @@ def get_feature_columns() -> list[str]:
     return list(feature_columns)
 
 
+def top_feature_importance(top_n: int = 20) -> dict:
+    _, xgb_model, feature_columns, _ = _load()
+    pairs = sorted(zip(feature_columns, xgb_model.feature_importances_), key=lambda p: p[1], reverse=True)[:top_n]
+    return {
+        "features": [name for name, _ in pairs],
+        "importances": [float(score) for _, score in pairs],
+    }
+
+
 def predict(features: dict[str, float]) -> dict:
     if_model, xgb_model, feature_columns, threshold = _load()
 
