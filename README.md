@@ -129,6 +129,18 @@ semiconductor-fault-detection/
 
 > ⚠️ LSTM은 튜닝 시간이 길어 6주 내 완성 리스크 높음. IF + XGBoost만으로도 포트폴리오 충분히 강함.
 
+#### 실측 결과 (`notebooks/03_modeling.ipynb`, test set 313개, 최초 1회 평가)
+
+| 모델 | Precision | Recall | F1 | AUROC |
+|---|---|---|---|---|
+| Isolation Forest | 0.214 | 0.143 | 0.171 | 0.541 |
+| XGBoost | 0.155 | 0.429 | 0.228 | 0.692 |
+| Ensemble (투표, 민감도 우선) | 0.156 | 0.476 | 0.235 | 0.612 |
+
+- XGBoost 분류 임계값은 test가 아닌 5-fold 교차검증 OOF(out-of-fold) 예측으로 튜닝 (데이터 누출 방지).
+- SECOM은 노이즈가 많고 라벨-피처 상관성이 약한 것으로 알려진 벤치마크라, 이 정도의 F1/AUROC 범위가 선행 연구들과도 유사한 수준.
+- 앙상블은 재현율(불량 검출률) 우선 설계 — 실제 불량 21건 중 10건(47.6%)을 탐지.
+
 ### 4주차: FastAPI 서버 구현
 
 ```
@@ -175,7 +187,7 @@ SQLite 스키마: `process_logs`, `fault_records`, `model_metrics`
 
 > 반도체 공정을 이해하기 위해 SECOM 실제 센서 데이터와 서울대·KISTI 논문을 참고했습니다.
 > 데이터 특성상 결측값이 많고 클래스 불균형이 심해 피처 선택과 SMOTE 기반 데이터 증강을 먼저 적용했습니다.
-> Isolation Forest(비지도)와 XGBoost(지도)를 앙상블해 이상 탐지 모델을 설계했고, F1 Score XX / AUROC XX를 달성했습니다.
+> Isolation Forest(비지도)와 XGBoost(지도)를 앙상블해 이상 탐지 모델을 설계했고, XGBoost 기준 F1 Score 0.228 / AUROC 0.692, 재현율 우선 앙상블 기준 F1 0.235 / 재현율 47.6%를 달성했습니다.
 > SECOM은 학습·평가용, 공정 시뮬레이터는 실시간 추론용으로 역할을 분리 설계해 실제 운영 환경을 고려한 아키텍처를 구성했습니다.
 > FastAPI + React 대시보드로 실시간 모니터링까지 구현했으며 Hugging Face Space에서 직접 데모 확인 가능합니다.
 
@@ -189,3 +201,4 @@ SQLite 스키마: `process_logs`, `fault_records`, `model_metrics`
 - [x] 클래스 분포 확인 — 정상(Pass) 1463 / 불량(Fail) 104 (93.36% / 6.64%)
 - [x] 전처리 완료 (`notebooks/02_preprocessing.ipynb`) — 결측률 50% 초과 피처 제거, 중앙값 대체, 저분산 피처 제거, StandardScaler, SMOTE(train만) → `data/processed/`
 - [x] 공정 시뮬레이터 구현 (`simulator/process_simulator.py`) — 8대 공정 파라미터 정상 범위 기반 합성 데이터 생성, 이상 비율 10%로 정상 범위 이탈 값 생성
+- [x] AI 모델 구현 (`notebooks/03_modeling.ipynb`) — Isolation Forest + XGBoost 앙상블, 5-fold OOF로 분류 임계값 튜닝, `models/`에 저장 (F1/AUROC는 위 로드맵 3주차 표 참고)

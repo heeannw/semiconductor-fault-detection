@@ -12,3 +12,4 @@ seaborn
 plotly
 sqlalchemy
 python-dotenv
+joblib

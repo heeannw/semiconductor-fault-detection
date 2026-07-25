@@ -15,9 +15,10 @@ data/raw/*
 data/processed/*
 !data/processed/.gitkeep
 
-# Model artifacts
+# Model artifacts (reproducible by re-running notebooks/03_modeling.ipynb)
 models/*
 !models/.gitkeep
+!models/model_comparison.csv
 
 # Papers (large PDFs — keep out of git history)
 docs/papers/*.pdf
