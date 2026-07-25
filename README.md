@@ -149,6 +149,17 @@ semiconductor-fault-detection/
 - 국소: 개별 샘플에 대해 어떤 피처가 이상/정상 어느 쪽으로 얼마나 밀었는지(부호 포함) 확인 가능. 백엔드 `POST /api/ai/explain`으로 실시간 제공, `TreeExplainer`가 예측에 사용한 것과 동일한 트리 구조를 그대로 쓰므로 노트북 결과와 API 응답이 정확히 일치한다.
 - 대시보드 이상 탐지 결과 화면에 색상 막대(빨강=이상 쪽 기여, 초록=정상 쪽 기여)로 시각화.
 
+#### 피처 선택 실험 (6주차 확장, `notebooks/04_feature_selection.ipynb`)
+
+상관관계 필터(|corr|>0.95 제거, 440→267개) + XGBoost 중요도 기반 피처 선택으로 F1을 더 끌어올릴 수 있는지 실험했다. K 후보(30/50/100/200/267)마다 03과 동일한 5-fold OOF로 임계값과 OOF F1을 구하고, **OOF 기준 최고(k=30)를 test에 최초 1회만** 적용했다.
+
+| | Precision | Recall | F1 | AUROC |
+|---|---|---|---|---|
+| 베이스라인 (k=440, 03_modeling) | 0.155 | 0.429 | **0.228** | 0.692 |
+| 피처 선택 (k=30) | 0.129 | 0.190 | 0.154 | **0.741** |
+
+**결론: 프로덕션 모델은 baseline(k=440)을 그대로 유지.** AUROC는 뚜렷이 개선됐지만(랭킹 품질은 더 좋아짐) F1은 오히려 떨어졌다 — dev의 양성 샘플이 83개뿐이라 OOF로 고른 임계값이 fold 노이즈에 민감했고, test 재현율로 잘 전이되지 않았기 때문으로 보인다. 즉 병목은 피처 개수가 아니라 임계값 보정 쪽. 다음에 시도할 것: F1 argmax 대신 target-recall 기반 임계값, 또는 fold 간 임계값 평균화. 실험 결과는 `models/feature_selection_grid.csv`/`feature_selection_comparison.csv`에 남겨뒀다.
+
 ### 4주차: FastAPI 서버 구현
 
 ```
@@ -238,3 +249,4 @@ SQLite 스키마: `process_logs`, `fault_records`, `model_metrics`
 - [x] React 대시보드 구현 (`frontend/`) — 4개 화면(메인/시뮬레이터/탐지/이력), 브라우저에서 전 화면 수동 테스트 완료
 - [x] SHAP 설명가능성 추가 — `notebooks/03_modeling.ipynb`에 전역/국소 설명, `POST /api/ai/explain`, 이상 탐지 결과 화면에 SHAP 막대 시각화
 - [x] pytest 테스트 스위트 추가 — `backend/tests`(엔드포인트 13개) + `simulator/tests`(시뮬레이터 단위 테스트), 총 48개 테스트 통과. 모델/전처리 데이터가 없는 클론 상태에서도 ML 의존 테스트는 스킵되고 나머지는 통과하도록 설계
+- [x] 피처 선택 실험 (`notebooks/04_feature_selection.ipynb`) — 상관관계 필터 + 중요도 기반 선택 시도, AUROC는 개선(0.692→0.741)됐으나 F1은 악화(0.228→0.154)되어 베이스라인 유지로 결론

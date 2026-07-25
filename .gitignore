@@ -19,6 +19,11 @@ data/processed/*
 models/*
 !models/.gitkeep
 !models/model_comparison.csv
+!models/feature_selection_grid.csv
+!models/feature_selection_comparison.csv
+
+# pytest
+.pytest_cache/
 
 # Papers (large PDFs — keep out of git history)
 docs/papers/*.pdf
