@@ -1,0 +1,14 @@
+fastapi
+uvicorn[standard]
+scikit-learn
+xgboost
+pyod
+pandas
+numpy
+imbalanced-learn
+shap
+matplotlib
+seaborn
+plotly
+sqlalchemy
+python-dotenv

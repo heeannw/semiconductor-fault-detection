@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Data (raw SECOM data should not be committed — download via README instructions)
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+
+# Model artifacts
+models/*
+!models/.gitkeep
+
+# Papers (large PDFs — keep out of git history)
+docs/papers/*.pdf
+
+# Node / React
+node_modules/
+frontend/build/
+frontend/dist/
+
+# Env files
+.env
+.env.local
+
+# DB
+*.sqlite3
+*.db
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
