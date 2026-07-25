@@ -1,0 +1,2 @@
+mae_sec,mae_pct_of_mean,r2,delay_f1,delay_precision,delay_recall,delay_auroc
+57.75,0.1879,0.9325,0.9471,0.9328,0.9619,0.9957

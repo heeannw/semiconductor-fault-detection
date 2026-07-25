@@ -29,6 +29,7 @@ models/*
 !models/amhs_dispatch_policy_comparison.csv
 !models/amhs_vehicle_sensitivity.csv
 !models/amhs_baseline_transport_log.csv
+!models/amhs_delay_prediction_results.csv
 
 # One-off legacy conversion venv (see scripts/convert_wm811k.py)
 .venv_legacy/
