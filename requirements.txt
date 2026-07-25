@@ -1,3 +1,4 @@
+--extra-index-url https://download.pytorch.org/whl/cpu
 fastapi
 uvicorn[standard]
 scikit-learn
@@ -15,3 +16,4 @@ python-dotenv
 joblib
 pytest
 httpx
+torch

@@ -160,6 +160,15 @@ semiconductor-fault-detection/
 
 **결론: 프로덕션 모델은 baseline(k=440)을 그대로 유지.** AUROC는 뚜렷이 개선됐지만(랭킹 품질은 더 좋아짐) F1은 오히려 떨어졌다 — dev의 양성 샘플이 83개뿐이라 OOF로 고른 임계값이 fold 노이즈에 민감했고, test 재현율로 잘 전이되지 않았기 때문으로 보인다. 즉 병목은 피처 개수가 아니라 임계값 보정 쪽. 다음에 시도할 것: F1 argmax 대신 target-recall 기반 임계값, 또는 fold 간 임계값 평균화. 실험 결과는 `models/feature_selection_grid.csv`/`feature_selection_comparison.csv`에 남겨뒀다.
 
+#### LSTM Autoencoder (6주차 확장, 선택 항목, `notebooks/05_lstm_autoencoder.ipynb`)
+
+로드맵에 "시간 여유가 있을 때"로 남겨뒀던 항목. SECOM과는 완전히 별개로, **공정 시뮬레이터가 만드는 시계열**에 대해 정상 패턴만으로 학습한 LSTM Autoencoder의 재구성 오류로 이상을 탐지한다(길이 10 윈도우, 공정별 개별 모델).
+
+- **1차 시도(윈도우 전체 평균 재구성 오류)는 성능이 낮았다** — 공정별 F1 0.18~0.22. 원인: 윈도우 10칸 중 이상은 마지막 1칸뿐인데 나머지 9칸(정상)의 낮은 오류가 평균에 섞여 신호가 희석됨.
+- 라벨이 "마지막 시점이 이상인가"이므로 점수도 **마지막 시점의 재구성 오류만** 보도록 바꾸자 8개 공정 평균 F1이 0.20 → **0.955**로, AUROC가 0.72 → **~1.0**으로 뛰었다.
+- 다만 시뮬레이터 이상치는 규칙(정상 범위 이탈)으로 만들어지므로 SECOM(실측 노이즈 데이터)보다 구분이 훨씬 쉽다는 점은 감안해야 한다. 이 실험에서 얻은 진짜 교훈은 결과 수치보다 **"시계열 이상 탐지에서 윈도우 집계 방식이 성능을 좌우한다"**는 것.
+- `backend/`/`frontend/`에는 연동하지 않음 — 로드맵상 노트북 수준 실험으로 범위를 한정.
+
 ### 4주차: FastAPI 서버 구현
 
 ```
@@ -250,3 +259,4 @@ SQLite 스키마: `process_logs`, `fault_records`, `model_metrics`
 - [x] SHAP 설명가능성 추가 — `notebooks/03_modeling.ipynb`에 전역/국소 설명, `POST /api/ai/explain`, 이상 탐지 결과 화면에 SHAP 막대 시각화
 - [x] pytest 테스트 스위트 추가 — `backend/tests`(엔드포인트 13개) + `simulator/tests`(시뮬레이터 단위 테스트), 총 48개 테스트 통과. 모델/전처리 데이터가 없는 클론 상태에서도 ML 의존 테스트는 스킵되고 나머지는 통과하도록 설계
 - [x] 피처 선택 실험 (`notebooks/04_feature_selection.ipynb`) — 상관관계 필터 + 중요도 기반 선택 시도, AUROC는 개선(0.692→0.741)됐으나 F1은 악화(0.228→0.154)되어 베이스라인 유지로 결론
+- [x] LSTM Autoencoder 추가 (`notebooks/05_lstm_autoencoder.ipynb`) — 공정 시뮬레이터 시계열 대상, 공정별 개별 모델, 마지막 시점 재구성 오류 방식으로 평균 F1 0.955 달성

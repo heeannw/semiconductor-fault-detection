@@ -21,6 +21,7 @@ models/*
 !models/model_comparison.csv
 !models/feature_selection_grid.csv
 !models/feature_selection_comparison.csv
+!models/lstm_autoencoder_results.csv
 
 # pytest
 .pytest_cache/
