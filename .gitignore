@@ -14,6 +14,9 @@ data/raw/*
 !data/raw/.gitkeep
 data/processed/*
 !data/processed/.gitkeep
+# WM-811K derived (32x32, defect-labeled only, 3MB) — kept so notebook 06 runs without
+# needing the 2GB raw pickle + legacy pandas venv conversion step
+!data/processed/wafer_map_defects.npz
 
 # Model artifacts (reproducible by re-running notebooks/03_modeling.ipynb)
 models/*
@@ -22,6 +25,10 @@ models/*
 !models/feature_selection_grid.csv
 !models/feature_selection_comparison.csv
 !models/lstm_autoencoder_results.csv
+!models/wafer_map_cnn_report.csv
+
+# One-off legacy conversion venv (see scripts/convert_wm811k.py)
+.venv_legacy/
 
 # pytest
 .pytest_cache/

@@ -169,6 +169,17 @@ semiconductor-fault-detection/
 - 다만 시뮬레이터 이상치는 규칙(정상 범위 이탈)으로 만들어지므로 SECOM(실측 노이즈 데이터)보다 구분이 훨씬 쉽다는 점은 감안해야 한다. 이 실험에서 얻은 진짜 교훈은 결과 수치보다 **"시계열 이상 탐지에서 윈도우 집계 방식이 성능을 좌우한다"**는 것.
 - `backend/`/`frontend/`에는 연동하지 않음 — 로드맵상 노트북 수준 실험으로 범위를 한정.
 
+#### WM-811K 웨이퍼맵 결함 분류 CNN (6주차 확장, 선택 항목, `notebooks/06_wafer_map_cnn.ipynb`)
+
+로드맵에서 "선택적 활용"으로 남겨뒀던 두 번째 공개 데이터셋. SECOM(표 데이터)·시뮬레이터(시계열)에 이어 **이미지 데이터**를 다루는 세 번째 모델리티다.
+
+- **데이터 파이프라인 이슈**: 원본 `LSWMD.pkl`(2019년, pandas 0.2x대로 피클링)은 메인 pandas(3.x)로는 `pandas.indexes` 모듈을 못 찾아 읽지 못한다. `scripts/convert_wm811k.py`를 별도 레거시 venv(pandas==1.5.3)로 1회 실행해, 결함 라벨이 있는 25,519개 웨이퍼만 32×32(최근접 이웃 리사이즈)로 변환해 `data/processed/wafer_map_defects.npz`(3MB)로 저장 — 이 파일은 git에 커밋해뒀으므로 클론 후 바로 노트북 06을 돌릴 수 있다(2GB 원본/레거시 venv 없이도).
+- 결함 패턴 8종(Center/Donut/Edge-Loc/Edge-Ring/Loc/Random/Scratch/Near-full) 분류, 'none'(정상)은 제외. 데이터셋에 포함된 Training/Test 분할을 그대로 사용(17,625 / 7,894).
+- 클래스 불균형(Near-full 149개 vs Edge-Ring 9,680개, 최대 65배)은 SMOTE 대신 `CrossEntropyLoss`의 클래스 가중치로 처리 — 이미지 오버샘플링보다 간단하고 이 정도 불균형엔 충분했다.
+- 3-conv-block CNN(16→32→64 채널), 15 epoch, CPU로 수 분 내 학습.
+- **test 결과: accuracy 0.605, macro F1 0.664.** Near-full(F1 0.88)·Edge-Ring(F1 0.83)은 잘 잡지만 Scratch(precision 0.22)는 다른 클래스와 많이 혼동됨 — 흠집 패턴이 시각적으로 Random/Loc과 겹치는 경우가 많아서로 보인다. 공개 벤치마크의 정교한 모델들보다는 낮지만, 단순한 CNN + 클래스 가중치만으로도 합리적인 베이스라인.
+- `backend/`/`frontend/`에는 연동하지 않음 — LSTM과 동일하게 노트북 수준 실험으로 범위를 한정.
+
 ### 4주차: FastAPI 서버 구현
 
 ```
@@ -260,3 +271,4 @@ SQLite 스키마: `process_logs`, `fault_records`, `model_metrics`
 - [x] pytest 테스트 스위트 추가 — `backend/tests`(엔드포인트 13개) + `simulator/tests`(시뮬레이터 단위 테스트), 총 48개 테스트 통과. 모델/전처리 데이터가 없는 클론 상태에서도 ML 의존 테스트는 스킵되고 나머지는 통과하도록 설계
 - [x] 피처 선택 실험 (`notebooks/04_feature_selection.ipynb`) — 상관관계 필터 + 중요도 기반 선택 시도, AUROC는 개선(0.692→0.741)됐으나 F1은 악화(0.228→0.154)되어 베이스라인 유지로 결론
 - [x] LSTM Autoencoder 추가 (`notebooks/05_lstm_autoencoder.ipynb`) — 공정 시뮬레이터 시계열 대상, 공정별 개별 모델, 마지막 시점 재구성 오류 방식으로 평균 F1 0.955 달성
+- [x] WM-811K 웨이퍼맵 CNN 분류기 추가 (`notebooks/06_wafer_map_cnn.ipynb`) — 결함 패턴 8종 분류, test accuracy 0.605 / macro F1 0.664
