@@ -13,3 +13,5 @@ plotly
 sqlalchemy
 python-dotenv
 joblib
+pytest
+httpx

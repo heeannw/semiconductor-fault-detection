@@ -181,6 +181,7 @@ SQLite 스키마: `process_logs`, `fault_records`, `model_metrics`
 - `POST /api/model/retrain`은 `notebooks/03_modeling.ipynb`의 5-fold OOF 임계값 튜닝은 재사용하고(오프라인에서 이미 확정된 값), 최신 `data/processed` 데이터로 두 모델만 다시 학습해 `models/`에 덮어쓴다.
 - 로컬 실행: `.venv/Scripts/python -m uvicorn backend.app.main:app --port 8000` (프로젝트 루트에서), Swagger UI는 `/docs`.
 - 11개 엔드포인트 전부 실제 SECOM 테스트 샘플/시뮬레이터 데이터로 curl 스모크 테스트 완료.
+- 자동화 테스트: `.venv/Scripts/python -m pytest` (프로젝트 루트에서). `SEMISENSE_DATABASE_URL` 환경변수로 테스트 전용 SQLite 파일을 써서 실 서비스 DB(`backend/semisense.db`)를 건드리지 않는다. `models/`가 없는 상태에서 실행하면 ML 의존 테스트만 스킵되고 시뮬레이터/기본 엔드포인트 테스트는 그대로 통과한다.
 
 ### 5주차: React 대시보드 구현
 
@@ -236,3 +237,4 @@ SQLite 스키마: `process_logs`, `fault_records`, `model_metrics`
 - [x] FastAPI 서버 구현 (`backend/`) — 11개 엔드포인트 + 추가 2개(`/api/model/metrics`, `/api/model/feature-importance`), `process_logs`/`fault_records`/`model_metrics` SQLite 스키마, 전 엔드포인트 curl 스모크 테스트 완료
 - [x] React 대시보드 구현 (`frontend/`) — 4개 화면(메인/시뮬레이터/탐지/이력), 브라우저에서 전 화면 수동 테스트 완료
 - [x] SHAP 설명가능성 추가 — `notebooks/03_modeling.ipynb`에 전역/국소 설명, `POST /api/ai/explain`, 이상 탐지 결과 화면에 SHAP 막대 시각화
+- [x] pytest 테스트 스위트 추가 — `backend/tests`(엔드포인트 13개) + `simulator/tests`(시뮬레이터 단위 테스트), 총 48개 테스트 통과. 모델/전처리 데이터가 없는 클론 상태에서도 ML 의존 테스트는 스킵되고 나머지는 통과하도록 설계

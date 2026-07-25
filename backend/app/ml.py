@@ -9,6 +9,7 @@ from pathlib import Path
 
 import joblib
 import numpy as np
+import pandas as pd
 import shap
 
 MODELS_DIR = Path(__file__).resolve().parent.parent.parent / "models"
@@ -39,6 +40,10 @@ def _load():
     return _cache["if_model"], _cache["xgb_model"], _cache["feature_columns"], _cache["threshold"]
 
 
+def _row_df(features: dict[str, float], feature_columns: list[str]) -> pd.DataFrame:
+    return pd.DataFrame([[features[c] for c in feature_columns]], columns=feature_columns)
+
+
 def reload_models() -> None:
     """retrain 등으로 joblib 파일이 갱신된 뒤 캐시를 비운다."""
     _cache.clear()
@@ -65,7 +70,7 @@ def explain(features: dict[str, float], top_n: int = 10) -> dict:
     if missing:
         raise ValueError(f"{len(missing)}개 피처 누락 (예: {missing[:5]})")
 
-    row = np.array([[features[c] for c in feature_columns]])
+    row = _row_df(features, feature_columns)
     explanation = explainer(row)
 
     values = explanation.values[0]
@@ -74,7 +79,7 @@ def explain(features: dict[str, float], top_n: int = 10) -> dict:
     return {
         "base_value": float(explanation.base_values[0]),
         "top_contributors": [
-            {"feature": feature_columns[i], "shap_value": float(values[i]), "feature_value": float(row[0, i])}
+            {"feature": feature_columns[i], "shap_value": float(values[i]), "feature_value": float(row.iloc[0, i])}
             for i in order
         ],
     }
@@ -96,7 +101,7 @@ def predict(features: dict[str, float]) -> dict:
     if missing:
         raise ValueError(f"{len(missing)}개 피처 누락 (예: {missing[:5]})")
 
-    row = np.array([[features[c] for c in feature_columns]])
+    row = _row_df(features, feature_columns)
 
     if_is_anomaly = bool(if_model.predict(row)[0] == -1)
     if_score = float(-if_model.decision_function(row)[0])
