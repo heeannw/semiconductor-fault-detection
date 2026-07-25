@@ -1,0 +1,81 @@
+from datetime import datetime
+
+from pydantic import BaseModel, ConfigDict
+
+
+class SimulateRequest(BaseModel):
+    process: str = "all"  # PROCESS_SPECS의 키 하나, 또는 "all"(8개 전체 1건씩)
+    anomaly_ratio: float = 0.1
+
+
+class ProcessLogOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    process: str
+    process_name_ko: str
+    params: dict[str, float]
+    is_anomaly: bool
+    created_at: datetime
+
+
+class SecomDetectRequest(BaseModel):
+    features: dict[str, float]  # feature_name -> value (models/feature_columns.joblib 기준)
+
+
+class DetectResponse(BaseModel):
+    is_anomaly_isolation_forest: bool
+    is_anomaly_xgboost: bool
+    is_anomaly_ensemble: bool
+    if_score: float
+    xgb_proba: float
+    ensemble_score: float
+    fault_id: int
+
+
+class FaultRecordOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    model: str
+    if_score: float | None
+    xgb_proba: float | None
+    ensemble_score: float | None
+    is_anomaly: bool
+    alert_sent: bool
+    detected_at: datetime
+
+
+class AlertSendRequest(BaseModel):
+    fault_id: int
+
+
+class AlertSendResponse(BaseModel):
+    fault_id: int
+    alert_sent: bool
+
+
+class StatsSummary(BaseModel):
+    total_process_readings: int
+    total_process_anomalies: int
+    total_faults_detected: int
+    readings_by_process: dict[str, int]
+
+
+class YieldStats(BaseModel):
+    overall_yield: float
+    yield_by_process: dict[str, float]
+
+
+class RetrainResponse(BaseModel):
+    model_name: str
+    precision: float
+    recall: float
+    f1: float
+    auroc: float
+    trained_at: datetime
+
+
+class HealthResponse(BaseModel):
+    status: str
+    models_loaded: bool

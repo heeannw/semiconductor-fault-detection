@@ -159,6 +159,13 @@ GET    /api/health             서버 상태 확인
 
 SQLite 스키마: `process_logs`, `fault_records`, `model_metrics`
 
+#### 구현 메모
+
+- `POST /api/process/simulate`와 `POST /api/ai/detect`는 완전히 분리되어 있다. 전자는 `simulator/`가 만든 물리 파라미터(3개 내외)와 시뮬레이터 자체의 정상/이상 판정을 `process_logs`에 기록할 뿐, SECOM 학습 모델을 전혀 거치지 않는다. 후자만 SECOM과 동일한 피처 형식(`models/feature_columns.joblib`, 562개)을 입력받아 실제 학습된 Isolation Forest + XGBoost 앙상블로 추론하고 `fault_records`에 기록한다. 두 피처 공간은 차원이 달라 직접 연결할 수 없다는 게 "구조 명확화" 절의 핵심이며, 이 분리가 그 설계를 코드 수준까지 반영한 것이다.
+- `POST /api/model/retrain`은 `notebooks/03_modeling.ipynb`의 5-fold OOF 임계값 튜닝은 재사용하고(오프라인에서 이미 확정된 값), 최신 `data/processed` 데이터로 두 모델만 다시 학습해 `models/`에 덮어쓴다.
+- 로컬 실행: `.venv/Scripts/python -m uvicorn backend.app.main:app --port 8000` (프로젝트 루트에서), Swagger UI는 `/docs`.
+- 11개 엔드포인트 전부 실제 SECOM 테스트 샘플/시뮬레이터 데이터로 curl 스모크 테스트 완료.
+
 ### 5주차: React 대시보드 구현
 
 1. 메인 대시보드 (공정 상태 카드, 이상 현황, 수율 트렌드)
@@ -202,3 +209,4 @@ SQLite 스키마: `process_logs`, `fault_records`, `model_metrics`
 - [x] 전처리 완료 (`notebooks/02_preprocessing.ipynb`) — 결측률 50% 초과 피처 제거, 중앙값 대체, 저분산 피처 제거, StandardScaler, SMOTE(train만) → `data/processed/`
 - [x] 공정 시뮬레이터 구현 (`simulator/process_simulator.py`) — 8대 공정 파라미터 정상 범위 기반 합성 데이터 생성, 이상 비율 10%로 정상 범위 이탈 값 생성
 - [x] AI 모델 구현 (`notebooks/03_modeling.ipynb`) — Isolation Forest + XGBoost 앙상블, 5-fold OOF로 분류 임계값 튜닝, `models/`에 저장 (F1/AUROC는 위 로드맵 3주차 표 참고)
+- [x] FastAPI 서버 구현 (`backend/`) — 11개 엔드포인트, `process_logs`/`fault_records`/`model_metrics` SQLite 스키마, 전 엔드포인트 curl 스모크 테스트 완료
