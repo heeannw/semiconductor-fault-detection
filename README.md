@@ -141,6 +141,14 @@ semiconductor-fault-detection/
 - SECOM은 노이즈가 많고 라벨-피처 상관성이 약한 것으로 알려진 벤치마크라, 이 정도의 F1/AUROC 범위가 선행 연구들과도 유사한 수준.
 - 앙상블은 재현율(불량 검출률) 우선 설계 — 실제 불량 21건 중 10건(47.6%)을 탐지.
 
+#### SHAP 설명가능성 (6주차 확장)
+
+`shap.TreeExplainer`로 XGBoost의 전역/국소 설명을 추가했다.
+
+- 전역: `shap.summary_plot`(bar + beeswarm)으로 상위 20개 피처의 평균 기여도, `models/shap_importance.joblib`에 저장.
+- 국소: 개별 샘플에 대해 어떤 피처가 이상/정상 어느 쪽으로 얼마나 밀었는지(부호 포함) 확인 가능. 백엔드 `POST /api/ai/explain`으로 실시간 제공, `TreeExplainer`가 예측에 사용한 것과 동일한 트리 구조를 그대로 쓰므로 노트북 결과와 API 응답이 정확히 일치한다.
+- 대시보드 이상 탐지 결과 화면에 색상 막대(빨강=이상 쪽 기여, 초록=정상 쪽 기여)로 시각화.
+
 ### 4주차: FastAPI 서버 구현
 
 ```
@@ -162,6 +170,7 @@ GET    /api/health             서버 상태 확인
 ```
 GET    /api/model/metrics             모델 성능 이력 (model_metrics 테이블)
 GET    /api/model/feature-importance  XGBoost 피처 중요도 상위 N개
+POST   /api/ai/explain                SHAP 기반 개별 판정 설명 (국소 설명)
 ```
 
 SQLite 스키마: `process_logs`, `fault_records`, `model_metrics`
@@ -226,3 +235,4 @@ SQLite 스키마: `process_logs`, `fault_records`, `model_metrics`
 - [x] AI 모델 구현 (`notebooks/03_modeling.ipynb`) — Isolation Forest + XGBoost 앙상블, 5-fold OOF로 분류 임계값 튜닝, `models/`에 저장 (F1/AUROC는 위 로드맵 3주차 표 참고)
 - [x] FastAPI 서버 구현 (`backend/`) — 11개 엔드포인트 + 추가 2개(`/api/model/metrics`, `/api/model/feature-importance`), `process_logs`/`fault_records`/`model_metrics` SQLite 스키마, 전 엔드포인트 curl 스모크 테스트 완료
 - [x] React 대시보드 구현 (`frontend/`) — 4개 화면(메인/시뮬레이터/탐지/이력), 브라우저에서 전 화면 수동 테스트 완료
+- [x] SHAP 설명가능성 추가 — `notebooks/03_modeling.ipynb`에 전역/국소 설명, `POST /api/ai/explain`, 이상 탐지 결과 화면에 SHAP 막대 시각화

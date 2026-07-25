@@ -31,11 +31,37 @@ function ModelVerdict({ label, isAnomaly, score }) {
   );
 }
 
+function ShapBar({ contributor, maxAbs }) {
+  const isAnomalyPush = contributor.shap_value >= 0;
+  const widthPct = (Math.abs(contributor.shap_value) / maxAbs) * 100;
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+      <span style={{ width: 90, fontSize: 12, color: "var(--text-secondary)", flexShrink: 0 }}>
+        {contributor.feature}
+      </span>
+      <div style={{ flex: 1, background: "var(--gridline)", borderRadius: 4, height: 14, position: "relative" }}>
+        <div
+          style={{
+            width: `${widthPct}%`,
+            height: "100%",
+            borderRadius: 4,
+            background: isAnomalyPush ? "var(--status-critical)" : "var(--status-good)",
+          }}
+        />
+      </div>
+      <span style={{ width: 64, fontSize: 11, color: "var(--text-muted)", textAlign: "right", flexShrink: 0 }}>
+        {contributor.shap_value.toFixed(4)}
+      </span>
+    </div>
+  );
+}
+
 export default function Detection() {
   const [sampleKey, setSampleKey] = useState("normal");
   const [running, setRunning] = useState(false);
   const [error, setError] = useState(null);
   const [result, setResult] = useState(null);
+  const [explanation, setExplanation] = useState(null);
 
   const { data: importance } = useAsync(() => api.featureImportance(20), []);
 
@@ -43,8 +69,12 @@ export default function Detection() {
     setRunning(true);
     setError(null);
     try {
-      const res = await api.detect(SECOM_SAMPLES[sampleKey]);
-      setResult(res);
+      const [detectRes, explainRes] = await Promise.all([
+        api.detect(SECOM_SAMPLES[sampleKey]),
+        api.explain(SECOM_SAMPLES[sampleKey]),
+      ]);
+      setResult(detectRes);
+      setExplanation(explainRes);
     } catch (e) {
       setError(e.message);
     } finally {
@@ -84,6 +114,29 @@ export default function Detection() {
             <ModelVerdict label="XGBoost" isAnomaly={result.is_anomaly_xgboost} score={result.xgb_proba} />
             <ModelVerdict label="Ensemble (투표)" isAnomaly={result.is_anomaly_ensemble} score={result.ensemble_score} />
           </div>
+        </div>
+      )}
+
+      {explanation && (
+        <div className="card">
+          <p className="card-title">이 판정에 대한 SHAP 설명 (base value: {explanation.base_value.toFixed(4)})</p>
+          <div className="legend">
+            <span className="legend-item">
+              <span className="legend-swatch" style={{ background: "var(--status-critical)" }} />
+              이상 쪽으로 기여
+            </span>
+            <span className="legend-item">
+              <span className="legend-swatch" style={{ background: "var(--status-good)" }} />
+              정상 쪽으로 기여
+            </span>
+          </div>
+          {explanation.top_contributors.map((c) => (
+            <ShapBar
+              key={c.feature}
+              contributor={c}
+              maxAbs={Math.max(...explanation.top_contributors.map((x) => Math.abs(x.shap_value)))}
+            />
+          ))}
         </div>
       )}
 

@@ -9,6 +9,7 @@ from pathlib import Path
 
 import joblib
 import numpy as np
+import shap
 
 MODELS_DIR = Path(__file__).resolve().parent.parent.parent / "models"
 REQUIRED_FILES = [
@@ -46,6 +47,37 @@ def reload_models() -> None:
 def get_feature_columns() -> list[str]:
     _, _, feature_columns, _ = _load()
     return list(feature_columns)
+
+
+def _get_shap_explainer():
+    _, xgb_model, _, _ = _load()
+    if "shap_explainer" not in _cache:
+        _cache["shap_explainer"] = shap.TreeExplainer(xgb_model)
+    return _cache["shap_explainer"]
+
+
+def explain(features: dict[str, float], top_n: int = 10) -> dict:
+    """개별 예측에 대한 SHAP 기반 국소 설명. 양수는 이상(Fail) 쪽, 음수는 정상 쪽으로 미는 기여도."""
+    _, _, feature_columns, _ = _load()
+    explainer = _get_shap_explainer()
+
+    missing = [c for c in feature_columns if c not in features]
+    if missing:
+        raise ValueError(f"{len(missing)}개 피처 누락 (예: {missing[:5]})")
+
+    row = np.array([[features[c] for c in feature_columns]])
+    explanation = explainer(row)
+
+    values = explanation.values[0]
+    order = np.argsort(-np.abs(values))[:top_n]
+
+    return {
+        "base_value": float(explanation.base_values[0]),
+        "top_contributors": [
+            {"feature": feature_columns[i], "shap_value": float(values[i]), "feature_value": float(row[0, i])}
+            for i in order
+        ],
+    }
 
 
 def top_feature_importance(top_n: int = 20) -> dict:

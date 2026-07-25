@@ -21,6 +21,7 @@ from .schemas import (  # noqa: E402
     AlertSendRequest,
     AlertSendResponse,
     DetectResponse,
+    ExplainResponse,
     FaultRecordOut,
     FeatureImportanceOut,
     HealthResponse,
@@ -114,6 +115,17 @@ def detect_anomaly(req: SecomDetectRequest, db: Session = Depends(get_db)):
     db.refresh(record)
 
     return DetectResponse(**result, fault_id=record.id)
+
+
+@app.post("/api/ai/explain", response_model=ExplainResponse)
+def explain_detection(req: SecomDetectRequest):
+    try:
+        result = ml.explain(req.features)
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return ExplainResponse(**result)
 
 
 @app.get("/api/process/status", response_model=list[ProcessLogOut])

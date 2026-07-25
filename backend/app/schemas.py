@@ -93,6 +93,17 @@ class FeatureImportanceOut(BaseModel):
     importances: list[float]
 
 
+class ShapContributor(BaseModel):
+    feature: str
+    shap_value: float
+    feature_value: float
+
+
+class ExplainResponse(BaseModel):
+    base_value: float
+    top_contributors: list[ShapContributor]
+
+
 class HealthResponse(BaseModel):
     status: str
     models_loaded: bool

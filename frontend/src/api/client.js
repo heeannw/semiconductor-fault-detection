@@ -26,6 +26,8 @@ export const api = {
 
   detect: (features) =>
     request("/api/ai/detect", { method: "POST", body: JSON.stringify({ features }) }),
+  explain: (features) =>
+    request("/api/ai/explain", { method: "POST", body: JSON.stringify({ features }) }),
   faultList: (limit = 50) => request(`/api/fault/list?limit=${limit}`),
   faultDetail: (id) => request(`/api/fault/${id}`),
   sendAlert: (faultId) =>
