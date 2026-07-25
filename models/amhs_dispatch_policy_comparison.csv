@@ -1,0 +1,4 @@
+policy,completion_rate,avg_cycle_time_sec,p95_cycle_time_sec,avg_vehicle_utilization
+nearest_vehicle,1.0,366.7,633.0,0.5571
+fcfs,1.0,403.8,676.3,0.6123
+zone_based,1.0,349.5,606.1,0.5812

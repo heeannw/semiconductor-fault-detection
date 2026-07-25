@@ -30,7 +30,7 @@ SK하이닉스 AMHS 직무 면접 준비용으로 작성. AMHS(Automated Materia
 | AMHS 개념 | 프로젝트 구현 |
 |---|---|
 | 레이아웃(공정 스테이션 + 스토커 + 반송 네트워크) | `amhs/layout.py` — 기존 `simulator/`의 8대 공정을 노드로 재사용, 스토커/반송 거리 추가 |
-| OHT 반송 시뮬레이션 + Cycle Time/가동률 측정 | `amhs/oht_simulator.py` (SimPy 이산사건 시뮬레이션), `notebooks/07_amhs_dispatch_simulation.ipynb` |
+| OHT 반송 시뮬레이션 + Cycle Time/가동률 측정 | `amhs/simulation.py` (SimPy 이산사건 시뮬레이션), `notebooks/07_amhs_dispatch_simulation.ipynb` |
 | 디스패칭 알고리즘 비교 | 같은 노트북에서 최근접 차량 / FCFS / 구역기반 정책을 동일 시나리오로 비교 |
 | 반송 지연·혼잡 예측 | `notebooks/08_amhs_delay_prediction.ipynb` — 시뮬레이션 로그로 XGBoost 회귀/분류 |
 | 차량 예지보전 | `amhs/vehicle_health_simulator.py` + `notebooks/09_amhs_predictive_maintenance.ipynb` — SECOM/시뮬레이터에서 쓴 IF+XGBoost+LSTM 스택을 OHT 차량 센서(모터 전류, 진동, 온도)에 재적용 |
@@ -39,7 +39,21 @@ SECOM/공정 시뮬레이터 파트는 **FDC(Fault Detection and Classification)
 AMHS 파트는 **그 웨이퍼가 공정 장비까지 제때 도착하는가**를 다룬다. 같은 fab을 서로 다른 두 축(품질 vs 물류)에서
 바라본 셈이라, 두 파트를 하나의 레포에 함께 두는 게 자연스럽다.
 
-## 4. 면접 답변 메모
+## 4. 시뮬레이션 결과 (`notebooks/07_amhs_dispatch_simulation.ipynb`)
+
+**디스패칭 정책 비교** (차량 5대, FOUP 25개 × 2바퀴, 동일 시드로 공정 비교):
+
+| 정책 | 평균 반송 시간 | P95 반송 시간 | 평균 가동률 |
+|---|---|---|---|
+| FCFS (위치 무시) | 403.8초 | 676.3초 | 0.612 |
+| 최근접 차량 | 366.7초 | 633.0초 | 0.557 |
+| 구역기반 | **349.5초** | **606.1초** | 0.581 |
+
+위치를 고려하는 정책이 FCFS 대비 반송 시간을 9~13% 단축했다. FCFS는 완료율은 같아도 가동률이 가장 높다 — 더 많이 움직이고도 더 늦게 도착했다는 뜻이라, 디스패칭 품질이 곧 차량 효율이라는 걸 보여준다.
+
+**차량 대수 민감도** (최근접 배정 고정): 2대(1738초) → 4대(578초) → 6대(144초)로 가파르게 줄다가, 6대→8대(144→67초) 이후로는 8대→10대가 거의 그대로(67→66초)다. **6~8대 구간에서 한계효용이 꺾인다** — 이후엔 차량을 늘려도 스테이션 처리 시간 자체가 병목이라 반송 시간이 거의 안 줄어든다.
+
+## 5. 면접 답변 메모
 
 > AMHS 직무 지원 전, 실제 fab 반송 흐름을 이해하려고 OHT/스토커/디스패칭 개념을 시뮬레이션으로 직접 구현해봤습니다.
 > 8개 공정 스테이션 사이를 오가는 OHT 차량을 SimPy로 모델링하고, 최근접 차량 배정과 구역 기반 배정을 비교해

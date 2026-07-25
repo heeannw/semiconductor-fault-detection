@@ -26,6 +26,9 @@ models/*
 !models/feature_selection_comparison.csv
 !models/lstm_autoencoder_results.csv
 !models/wafer_map_cnn_report.csv
+!models/amhs_dispatch_policy_comparison.csv
+!models/amhs_vehicle_sensitivity.csv
+!models/amhs_baseline_transport_log.csv
 
 # One-off legacy conversion venv (see scripts/convert_wm811k.py)
 .venv_legacy/
