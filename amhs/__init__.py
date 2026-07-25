@@ -7,6 +7,7 @@ from .simulation import (
     run_simulation,
     zone_based_dispatch,
 )
+from .vehicle_health_simulator import VEHICLE_HEALTH_SPECS, VehicleHealthSimulator
 
 __all__ = [
     "STATION_ORDER",
@@ -20,4 +21,6 @@ __all__ = [
     "nearest_vehicle_dispatch",
     "fcfs_dispatch",
     "zone_based_dispatch",
+    "VehicleHealthSimulator",
+    "VEHICLE_HEALTH_SPECS",
 ]

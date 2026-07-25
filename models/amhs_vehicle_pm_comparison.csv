@@ -1,0 +1,4 @@
+model,precision,recall,f1,auroc
+Isolation Forest,0.9495,1.0,0.9741,1.0
+XGBoost,1.0,0.9894,0.9947,1.0
+Ensemble (vote + score),0.9495,1.0,0.9741,1.0

@@ -33,7 +33,7 @@ SK하이닉스 AMHS 직무 면접 준비용으로 작성. AMHS(Automated Materia
 | OHT 반송 시뮬레이션 + Cycle Time/가동률 측정 | `amhs/simulation.py` (SimPy 이산사건 시뮬레이션), `notebooks/07_amhs_dispatch_simulation.ipynb` |
 | 디스패칭 알고리즘 비교 | 같은 노트북에서 최근접 차량 / FCFS / 구역기반 정책을 동일 시나리오로 비교 |
 | 반송 지연·혼잡 예측 | `notebooks/08_amhs_delay_prediction.ipynb` — 시뮬레이션 로그로 XGBoost 회귀/분류 |
-| 차량 예지보전 | `amhs/vehicle_health_simulator.py` + `notebooks/09_amhs_predictive_maintenance.ipynb` — SECOM/시뮬레이터에서 쓴 IF+XGBoost+LSTM 스택을 OHT 차량 센서(모터 전류, 진동, 온도)에 재적용 |
+| 차량 예지보전 | `amhs/vehicle_health_simulator.py` + `notebooks/09_amhs_predictive_maintenance.ipynb` — SECOM에서 쓴 IF+XGBoost 앙상블 파이프라인을 OHT 차량 센서(모터 전류, 진동, 온도)에 재적용 |
 
 SECOM/공정 시뮬레이터 파트는 **FDC(Fault Detection and Classification)** — "웨이퍼가 불량인가"를 다뤘다면,
 AMHS 파트는 **그 웨이퍼가 공정 장비까지 제때 도착하는가**를 다룬다. 같은 fab을 서로 다른 두 축(품질 vs 물류)에서
@@ -66,7 +66,19 @@ AMHS 파트는 **그 웨이퍼가 공정 장비까지 제때 도착하는가**�
 
 **피처 중요도: `concurrent_requests`(요청 시점 시스템 부하) 0.726, `n_vehicles` 0.260, `direct_travel_time`(정적 거리) 0.000.** 즉 반송이 얼마나 걸릴지는 스테이션 간 거리가 아니라 **그 순간 시스템이 얼마나 붐비는가**가 거의 전부 설명한다 — 레이아웃은 고정이지만 부하는 실시간으로 바뀌므로, 실제 MCS도 정적 경로 정보보다 실시간 큐 상태를 보고 판단해야 한다는 뜻으로 읽힌다.
 
-## 6. 면접 답변 메모
+## 6. 차량 예지보전 (`notebooks/09_amhs_predictive_maintenance.ipynb`)
+
+`03_modeling.ipynb`에서 SECOM에 썼던 파이프라인(Isolation Forest + XGBoost 앙상블, 5-fold OOF 임계값 튜닝, SHAP)을 **그대로**, 대상만 OHT 차량 센서(모터 전류, 호이스트 진동, 모터 온도, 브레이크 응답시간, 베어링 온도)로 바꿔 재적용했다.
+
+| 모델 | Precision | Recall | F1 | AUROC |
+|---|---|---|---|---|
+| Isolation Forest | 0.950 | 1.000 | 0.974 | 1.000 |
+| XGBoost | 1.000 | 0.989 | 0.995 | 1.000 |
+| Ensemble | 0.950 | 1.000 | 0.974 | 1.000 |
+
+SECOM(F1 0.228)보다 훨씬 높지만, 이건 모델이 더 좋아서가 아니다 — 5개 센서짜리 규칙 기반 합성 데이터가 590개 실측 노이즈 센서보다 근본적으로 쉬운 문제라서다(노트북 05/06과 같은 패턴). 이 노트북의 목적은 수치 자체가 아니라, **SECOM에서 검증한 파이프라인이 도메인을 바꿔도(공정 품질 → 차량 상태) 그대로 재사용된다는 것**을 보이는 데 있다.
+
+## 7. 면접 답변 메모
 
 > AMHS 직무 지원 전, 실제 fab 반송 흐름을 이해하려고 OHT/스토커/디스패칭 개념을 시뮬레이션으로 직접 구현해봤습니다.
 > 8개 공정 스테이션 사이를 오가는 OHT 차량을 SimPy로 모델링하고, 최근접 차량 배정과 구역 기반 배정을 비교해
