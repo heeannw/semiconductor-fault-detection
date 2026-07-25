@@ -1,0 +1,33 @@
+def test_amhs_stations_returns_eight(client):
+    res = client.get("/api/amhs/stations")
+    assert res.status_code == 200
+    stations = res.json()
+    assert len(stations) == 8
+    assert [s["index"] for s in stations] == list(range(8))
+
+
+def test_amhs_simulate_nearest(client):
+    res = client.post("/api/amhs/simulate", json={"n_vehicles": 4, "n_foups": 8, "n_laps": 1, "policy": "nearest"})
+    assert res.status_code == 200
+    body = res.json()
+    assert body["completion_rate"] == 1.0
+    assert body["avg_cycle_time_sec"] > 0
+
+
+def test_amhs_simulate_all_policies(client):
+    for policy in ("nearest", "fcfs", "zone"):
+        res = client.post("/api/amhs/simulate", json={"n_vehicles": 3, "n_foups": 6, "n_laps": 1, "policy": policy})
+        assert res.status_code == 200
+        assert res.json()["policy"] == policy
+
+
+def test_amhs_simulate_unknown_policy_returns_400(client):
+    res = client.post("/api/amhs/simulate", json={"policy": "not_a_policy"})
+    assert res.status_code == 400
+
+
+def test_amhs_simulate_rejects_out_of_range_n_vehicles(client):
+    res = client.post("/api/amhs/simulate", json={"n_vehicles": 0})
+    assert res.status_code == 400
+    res = client.post("/api/amhs/simulate", json={"n_vehicles": 21})
+    assert res.status_code == 400

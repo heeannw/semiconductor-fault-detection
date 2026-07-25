@@ -39,4 +39,11 @@ export const api = {
   retrainModel: () => request("/api/model/retrain", { method: "POST" }),
   modelMetrics: (limit = 20) => request(`/api/model/metrics?limit=${limit}`),
   featureImportance: (topN = 20) => request(`/api/model/feature-importance?top_n=${topN}`),
+
+  amhsStations: () => request("/api/amhs/stations"),
+  amhsSimulate: ({ nVehicles = 5, nFoups = 20, nLaps = 2, policy = "nearest", seed = 42 }) =>
+    request("/api/amhs/simulate", {
+      method: "POST",
+      body: JSON.stringify({ n_vehicles: nVehicles, n_foups: nFoups, n_laps: nLaps, policy, seed }),
+    }),
 };

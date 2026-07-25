@@ -14,12 +14,17 @@ if str(ROOT_DIR) not in sys.path:
 
 from simulator import PROCESS_SPECS, ProcessSimulator  # noqa: E402
 
+import amhs  # noqa: E402
+
 from . import ml, training  # noqa: E402
 from .database import Base, SessionLocal, engine, get_db  # noqa: E402
 from .models import FaultRecord, ModelMetric, ProcessLog  # noqa: E402
 from .schemas import (  # noqa: E402
     AlertSendRequest,
     AlertSendResponse,
+    AmhsSimulateRequest,
+    AmhsSimulateResponse,
+    AmhsStationOut,
     DetectResponse,
     ExplainResponse,
     FaultRecordOut,
@@ -33,6 +38,12 @@ from .schemas import (  # noqa: E402
     StatsSummary,
     YieldStats,
 )
+
+AMHS_POLICIES = {
+    "nearest": amhs.nearest_vehicle_dispatch,
+    "fcfs": amhs.fcfs_dispatch,
+    "zone": amhs.zone_based_dispatch,
+}
 
 simulator = ProcessSimulator()
 
@@ -249,6 +260,41 @@ def model_feature_importance(top_n: int = 20):
         return ml.top_feature_importance(top_n)
     except FileNotFoundError as e:
         raise HTTPException(status_code=503, detail=str(e))
+
+
+@app.get("/api/amhs/stations", response_model=list[AmhsStationOut])
+def amhs_stations():
+    return [
+        AmhsStationOut(name=s.name, name_ko=s.name_ko, index=s.index)
+        for s in sorted(amhs.STATIONS.values(), key=lambda s: s.index)
+    ]
+
+
+@app.post("/api/amhs/simulate", response_model=AmhsSimulateResponse)
+def amhs_simulate(req: AmhsSimulateRequest):
+    if req.policy not in AMHS_POLICIES:
+        raise HTTPException(status_code=400, detail=f"Unknown policy: {req.policy}. Valid: {list(AMHS_POLICIES)}")
+    if not (1 <= req.n_vehicles <= 20):
+        raise HTTPException(status_code=400, detail="n_vehicles must be between 1 and 20")
+    if not (1 <= req.n_foups <= 100):
+        raise HTTPException(status_code=400, detail="n_foups must be between 1 and 100")
+
+    result = amhs.run_simulation(
+        n_vehicles=req.n_vehicles,
+        n_foups=req.n_foups,
+        n_laps=req.n_laps,
+        dispatch_policy=AMHS_POLICIES[req.policy],
+        seed=req.seed,
+    )
+    return AmhsSimulateResponse(
+        policy=req.policy,
+        n_vehicles=req.n_vehicles,
+        completion_rate=result["completion_rate"],
+        avg_cycle_time_sec=result["avg_cycle_time_sec"],
+        p95_cycle_time_sec=result["p95_cycle_time_sec"],
+        avg_vehicle_utilization=result["avg_vehicle_utilization"],
+        completed_transports=result["completed_transports"],
+    )
 
 
 @app.get("/api/health", response_model=HealthResponse)

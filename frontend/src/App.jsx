@@ -3,12 +3,14 @@ import Dashboard from "./pages/Dashboard.jsx";
 import Simulator from "./pages/Simulator.jsx";
 import Detection from "./pages/Detection.jsx";
 import History from "./pages/History.jsx";
+import Amhs from "./pages/Amhs.jsx";
 
 const NAV_ITEMS = [
   { to: "/", label: "메인 대시보드", end: true },
   { to: "/simulator", label: "공정 시뮬레이터" },
   { to: "/detection", label: "이상 탐지 결과" },
   { to: "/history", label: "이력 관리" },
+  { to: "/amhs", label: "AMHS 물류" },
 ];
 
 function App() {
@@ -37,6 +39,7 @@ function App() {
             <Route path="/simulator" element={<Simulator />} />
             <Route path="/detection" element={<Detection />} />
             <Route path="/history" element={<History />} />
+            <Route path="/amhs" element={<Amhs />} />
           </Routes>
         </main>
       </div>

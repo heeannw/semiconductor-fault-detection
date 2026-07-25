@@ -31,9 +31,10 @@ SK하이닉스 AMHS 직무 면접 준비용으로 작성. AMHS(Automated Materia
 |---|---|
 | 레이아웃(공정 스테이션 + 스토커 + 반송 네트워크) | `amhs/layout.py` — 기존 `simulator/`의 8대 공정을 노드로 재사용, 스토커/반송 거리 추가 |
 | OHT 반송 시뮬레이션 + Cycle Time/가동률 측정 | `amhs/simulation.py` (SimPy 이산사건 시뮬레이션), `notebooks/07_amhs_dispatch_simulation.ipynb` |
-| 디스패칭 알고리즘 비교 | 같은 노트북에서 최근접 차량 / FCFS / 구역기반 정책을 동일 시나리오로 비교 |
+| 디스패칭 알고리즘 비교 | 같은 노트북에서 최근접 차량 / FCFS / 구역기반 정책을 동일 시나리오로 비교, 대시보드에서 실시간 실행도 가능 |
 | 반송 지연·혼잡 예측 | `notebooks/08_amhs_delay_prediction.ipynb` — 시뮬레이션 로그로 XGBoost 회귀/분류 |
 | 차량 예지보전 | `amhs/vehicle_health_simulator.py` + `notebooks/09_amhs_predictive_maintenance.ipynb` — SECOM에서 쓴 IF+XGBoost 앙상블 파이프라인을 OHT 차량 센서(모터 전류, 진동, 온도)에 재적용 |
+| 대시보드 연동 | `backend/app/main.py`의 `POST /api/amhs/simulate`가 SimPy 시뮬레이션을 즉시 실행(< 1초) — React 대시보드 "AMHS 물류" 화면에서 디스패칭 정책 비교/차량 대수 민감도를 버튼 클릭으로 실시간 확인 |
 
 SECOM/공정 시뮬레이터 파트는 **FDC(Fault Detection and Classification)** — "웨이퍼가 불량인가"를 다뤘다면,
 AMHS 파트는 **그 웨이퍼가 공정 장비까지 제때 도착하는가**를 다룬다. 같은 fab을 서로 다른 두 축(품질 vs 물류)에서

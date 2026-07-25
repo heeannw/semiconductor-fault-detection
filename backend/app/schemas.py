@@ -107,3 +107,27 @@ class ExplainResponse(BaseModel):
 class HealthResponse(BaseModel):
     status: str
     models_loaded: bool
+
+
+class AmhsSimulateRequest(BaseModel):
+    n_vehicles: int = 5
+    n_foups: int = 20
+    n_laps: int = 2
+    policy: str = "nearest"  # "nearest" | "fcfs" | "zone"
+    seed: int = 42
+
+
+class AmhsSimulateResponse(BaseModel):
+    policy: str
+    n_vehicles: int
+    completion_rate: float
+    avg_cycle_time_sec: float
+    p95_cycle_time_sec: float
+    avg_vehicle_utilization: float
+    completed_transports: int
+
+
+class AmhsStationOut(BaseModel):
+    name: str
+    name_ko: str
+    index: int

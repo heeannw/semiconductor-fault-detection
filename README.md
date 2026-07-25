@@ -21,7 +21,7 @@ SECOM은 어느 공정에서 나온 데이터인지 라벨이 없음. 따라서 
 
 ### AMHS 확장 (SK하이닉스 AMHS 직무 지원용)
 
-SECOM/공정 시뮬레이터 파트가 **"웨이퍼가 불량인가"(FDC)**를 다룬다면, `amhs/`와 `notebooks/07~09`는 **"웨이퍼가 공정 장비까지 제때 도착하는가"(AMHS 물류)**를 다룬다. OHT 반송 시뮬레이션, 디스패칭 알고리즘 비교, 반송 지연 예측, 차량 예지보전까지 — 개념 정리는 [docs/AMHS.md](docs/AMHS.md) 참고.
+SECOM/공정 시뮬레이터 파트가 **"웨이퍼가 불량인가"(FDC)**를 다룬다면, `amhs/`와 `notebooks/07~09`는 **"웨이퍼가 공정 장비까지 제때 도착하는가"(AMHS 물류)**를 다룬다. OHT 반송 시뮬레이션, 디스패칭 알고리즘 비교, 반송 지연 예측, 차량 예지보전에 더해 대시보드의 "AMHS 물류" 화면에서 실시간 실행까지 — 개념 정리는 [docs/AMHS.md](docs/AMHS.md) 참고.
 
 ## 📚 참고 논문 & 데이터셋
 
@@ -206,6 +206,8 @@ GET    /api/health             서버 상태 확인
 GET    /api/model/metrics             모델 성능 이력 (model_metrics 테이블)
 GET    /api/model/feature-importance  XGBoost 피처 중요도 상위 N개
 POST   /api/ai/explain                SHAP 기반 개별 판정 설명 (국소 설명)
+GET    /api/amhs/stations             AMHS 반송 네트워크 스테이션 목록
+POST   /api/amhs/simulate             OHT 반송 시뮬레이션 즉시 실행 (< 1초)
 ```
 
 SQLite 스키마: `process_logs`, `fault_records`, `model_metrics`
@@ -224,14 +226,16 @@ SQLite 스키마: `process_logs`, `fault_records`, `model_metrics`
 2. 공정 시뮬레이터 화면 (8대 공정 파이프라인 시각화)
 3. 이상 탐지 결과 화면 (피처 중요도, 모델별 비교)
 4. 이력 관리 화면 (이상 이력, 수율 트렌드, 모델 성능 지표)
+5. AMHS 물류 화면 (6주차 확장 — 디스패칭 정책 비교/차량 대수 민감도를 버튼 클릭으로 실시간 실행)
 
 #### 구현 메모
 
 - Vite + React + `react-router-dom` + `recharts`. (원안의 Chart.js는 생략 — 하나의 차팅 라이브러리로 요구되는 차트를 전부 커버할 수 있어 굳이 두 개를 함께 쓰지 않았다.)
 - `src/api/client.js`가 백엔드(`http://localhost:8000`)를 호출하는 유일한 지점. CORS는 Vite 기본 포트(5173)와 원안 기준 CRA 포트(3000)를 모두 허용하도록 백엔드에 설정.
 - 이상 탐지 결과 화면은 `X_test.csv`에서 뽑은 실제 SECOM 샘플 3종(정상 / 모델이 탐지한 불량 / 모델이 놓친 불량)을 `src/data/secomSamples.js`에 고정 fixture로 내장해 데모 — 440차원 피처를 사람이 직접 입력할 수 없기 때문.
+- AMHS 물류 화면은 `POST /api/amhs/simulate`를 그때그때 호출해 정책 비교/차량 대수 민감도를 실시간으로 그린다(시뮬레이션이 1초 미만이라 가능). 반송 지연 예측(노트북 08)·차량 예지보전(노트북 09)은 XGBoost/IsolationForest 재학습이 무거워 대시보드에서 실시간으로 돌리지 않고 노트북 실행 결과를 참고용 고정 표로만 보여준다.
 - 로컬 실행: `cd frontend && npm install && npm run dev` (백엔드가 8000번 포트에 떠 있어야 함).
-- 브라우저에서 4개 화면 전부 수동 테스트 완료: 시뮬레이션 실행 → 대시보드/시뮬레이터 화면 갱신, 탐지 실행 → 모델별 비교 카드, 알림 발송 → 상태 변경, 재학습 → 이력 테이블에 새 행 추가.
+- 브라우저에서 5개 화면 전부 수동 테스트 완료: 시뮬레이션 실행 → 대시보드/시뮬레이터 화면 갱신, 탐지 실행 → 모델별 비교 카드, 알림 발송 → 상태 변경, 재학습 → 이력 테이블에 새 행 추가, AMHS 정책 비교/민감도 버튼 → 실시간 차트 갱신.
 
 ### 6주차: 마무리 + 배포
 
@@ -269,10 +273,15 @@ SQLite 스키마: `process_logs`, `fault_records`, `model_metrics`
 - [x] 전처리 완료 (`notebooks/02_preprocessing.ipynb`) — 결측률 50% 초과 피처 제거, 중앙값 대체, 저분산 피처 제거, StandardScaler, SMOTE(train만) → `data/processed/`
 - [x] 공정 시뮬레이터 구현 (`simulator/process_simulator.py`) — 8대 공정 파라미터 정상 범위 기반 합성 데이터 생성, 이상 비율 10%로 정상 범위 이탈 값 생성
 - [x] AI 모델 구현 (`notebooks/03_modeling.ipynb`) — Isolation Forest + XGBoost 앙상블, 5-fold OOF로 분류 임계값 튜닝, `models/`에 저장 (F1/AUROC는 위 로드맵 3주차 표 참고)
-- [x] FastAPI 서버 구현 (`backend/`) — 11개 엔드포인트 + 추가 2개(`/api/model/metrics`, `/api/model/feature-importance`), `process_logs`/`fault_records`/`model_metrics` SQLite 스키마, 전 엔드포인트 curl 스모크 테스트 완료
-- [x] React 대시보드 구현 (`frontend/`) — 4개 화면(메인/시뮬레이터/탐지/이력), 브라우저에서 전 화면 수동 테스트 완료
+- [x] FastAPI 서버 구현 (`backend/`) — 11개 엔드포인트 + 추가 4개(`/api/model/metrics`, `/api/model/feature-importance`, `/api/ai/explain`, `/api/amhs/*`), `process_logs`/`fault_records`/`model_metrics` SQLite 스키마, 전 엔드포인트 curl 스모크 테스트 완료
+- [x] React 대시보드 구현 (`frontend/`) — 5개 화면(메인/시뮬레이터/탐지/이력/AMHS 물류), 브라우저에서 전 화면 수동 테스트 완료
 - [x] SHAP 설명가능성 추가 — `notebooks/03_modeling.ipynb`에 전역/국소 설명, `POST /api/ai/explain`, 이상 탐지 결과 화면에 SHAP 막대 시각화
 - [x] pytest 테스트 스위트 추가 — `backend/tests`(엔드포인트 13개) + `simulator/tests`(시뮬레이터 단위 테스트), 총 48개 테스트 통과. 모델/전처리 데이터가 없는 클론 상태에서도 ML 의존 테스트는 스킵되고 나머지는 통과하도록 설계
 - [x] 피처 선택 실험 (`notebooks/04_feature_selection.ipynb`) — 상관관계 필터 + 중요도 기반 선택 시도, AUROC는 개선(0.692→0.741)됐으나 F1은 악화(0.228→0.154)되어 베이스라인 유지로 결론
 - [x] LSTM Autoencoder 추가 (`notebooks/05_lstm_autoencoder.ipynb`) — 공정 시뮬레이터 시계열 대상, 공정별 개별 모델, 마지막 시점 재구성 오류 방식으로 평균 F1 0.955 달성
 - [x] WM-811K 웨이퍼맵 CNN 분류기 추가 (`notebooks/06_wafer_map_cnn.ipynb`) — 결함 패턴 8종 분류, test accuracy 0.605 / macro F1 0.664
+- [x] AMHS 개념 정리 (`docs/AMHS.md`) — OHT/스토커/디스패칭 등 핵심 용어, 프로젝트 매핑, 면접 답변 메모
+- [x] OHT/스토커 물류 시뮬레이션 (`amhs/`, `notebooks/07_amhs_dispatch_simulation.ipynb`) — SimPy 이산사건 시뮬레이션, 디스패칭 정책 3종 비교(구역기반 349.5초 < 최근접 366.7초 < FCFS 403.8초), 차량 대수 민감도(6~8대에서 한계효용 체감)
+- [x] 반송 지연 예측 (`notebooks/08_amhs_delay_prediction.ipynb`) — run-level split, R² 0.933 / 지연 분류 F1 0.947, 실시간 시스템 부하가 정적 거리보다 압도적으로 중요
+- [x] OHT 차량 예지보전 (`amhs/vehicle_health_simulator.py`, `notebooks/09_amhs_predictive_maintenance.ipynb`) — SECOM 파이프라인(IF+XGBoost+SHAP)을 차량 센서 도메인에 재적용
+- [x] 대시보드 AMHS 화면 추가 — `POST /api/amhs/simulate`로 디스패칭 정책 비교/차량 대수 민감도를 실시간 실행, 브라우저에서 동작 확인
