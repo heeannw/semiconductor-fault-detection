@@ -2,7 +2,8 @@
 
 SK하이닉스 AMHS 직무 면접 준비용으로 작성. AMHS(Automated Material Handling System)는 반도체 fab 내에서
 웨이퍼(FOUP)를 공정 장비 사이로 자동 운반하는 물류 시스템이다. `amhs/` 모듈과 `notebooks/07~09`는 이 개념들을
-직접 구현하며 이해도를 다진 결과물이다.
+직접 구현하며 이해도를 다진 결과물이다. 디스패칭 정책은 스스로 만들어본 것이지만, 그 설계가 실제 연구/업계
+방향과 어디서 겹치고 어디서 갈리는지는 §8 참고 문헌에서 밝혀둔다.
 
 ## 1. 핵심 용어
 
@@ -123,3 +124,18 @@ SECOM(F1 0.228)보다 훨씬 높지만, 이건 모델이 더 좋아서가 아니
 > 효과가 전혀 없다가, 일부러 차량을 줄이고 반송 요청이 몰리는 경쟁 상황을 만들자 hot lot이 일반
 > 로트보다 31% 빨라졌다는 점입니다 — 우선순위 규칙은 자원이 부족해 경쟁이 생길 때만 의미가
 > 있다는, 스케줄링 이론의 기본 원리를 시뮬레이션으로 직접 확인한 셈입니다.
+
+## 8. 참고 문헌
+
+이 프로젝트의 디스패칭 정책(최근접/FCFS/구역기반/hot lot/예측 기반)은 직접 설계한 것이지만, 실제 AMHS 연구가 다루는 문제와 어디서 겹치고 어디서 더 나아가는지 확인하려고 관련 문헌을 찾아봤다.
+
+| # | 문헌 | 이 프로젝트와의 관계 |
+|---|---|---|
+| ① | Agrawal, G., & Heragu, S. (2006). *A Survey of Automated Material Handling Systems in 300-mm Semiconductor Fabs.* IEEE Transactions on Semiconductor Manufacturing, 19(1), 112–120. | AMHS 전반(스토커, OHT, 레이아웃, 디스패칭)의 개념 지도 — §1~3에서 다루는 용어 정리의 근거. |
+| ② | Liao, D.-Y., & Wang, C.-N. (2005). *Differentiated preemptive dispatching for automatic materials handling services in 300 mm semiconductor foundry.* The International Journal of Advanced Manufacturing Technology (Springer). | **Hot lot 우선순위 디스패칭**을 다룬 실제 연구(DPD 정책) — 대만 300mm 파운드리 실측 데이터로 검증. `amhs/simulation.py`의 hot lot 구현은 이 논문만큼 정교하진 않지만(전면 선점(preemptive)까지는 안 감, 대기 순서 재배정만 함) 문제의식은 같다. |
+| ③ | Wang, C.N., Wang, J.W., Chou, M.T., Liao, R.Y., & Huang, C.J. (2017). *A dispatching method for the lots of different priorities in 450-mm semiconductor manufacturing.* Advances in Mechanical Engineering (SAGE). | 마찬가지로 로트 우선순위 디스패칭 — hot lot이 학계에서도 꾸준히 다뤄지는 실제 문제라는 근거. |
+| ④ | Im, S. et al. *Effective overhead hoist transport dispatching based on the Hungarian algorithm for a large semiconductor FAB.* | 이 프로젝트의 최근접/구역기반 정책은 매 순간 그리디(greedy)하게 하나씩 배정하는데, 실제로는 여러 차량-요청 쌍을 전역 최적으로 매칭하는 **헝가리안 알고리즘** 기반 접근이 연구돼 있다 — 다음에 시도해볼 만한 고도화 방향. |
+| ⑤ | *Multi-factor OHT scheduling method of AMHS for semiconductor fabrications.* | 거리, 대기시간, 로트 우선순위, 병목 스테이션, 차량 가동률을 함께 고려하는 다변수 스케줄링 — 이 프로젝트가 각각을 별도 정책(최근접=거리, hot lot=우선순위, 예측 기반=혼잡도)으로 나눠 다룬 것을 하나의 비용함수로 통합하면 이 방향에 가까워진다. |
+| ⑥ | *Multiagent reinforcement learning-based dispatching model for overhead hoist transfer in AMHS* (2025, ScienceDirect). | 최근 연구는 규칙 기반을 넘어 강화학습으로 가고 있다 — `amhs/predictive.py`(지도학습 회귀로 혼잡도를 예측해 정책을 전환)는 이 방향의 훨씬 단순한 버전이라고 볼 수 있다. |
+
+**솔직한 한계**: 이 프로젝트의 디스패칭 정책은 위 문헌들에 비해 훨씬 단순하다(그리디 배정, 전역 최적화 없음, 학습 기반 정책도 회귀 모델 하나로 임계값만 전환하는 수준). 그럼에도 이 문헌들을 찾아본 이유는 "그럴듯하게 만든 시뮬레이션"이 아니라 "실제로 연구되는 문제를 단순화해서 다뤘다"는 걸 스스로 확인하고, 다음에 더 정교하게 만들 방향(헝가리안 알고리즘, 다변수 비용함수, RL)을 구체적으로 알아두기 위해서다.

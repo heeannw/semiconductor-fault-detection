@@ -325,4 +325,5 @@ docker compose up --build
 - [x] Docker화 (`backend/Dockerfile`, `frontend/Dockerfile`, `docker-compose.yml`) — `docker compose up --build`로 로컬 실행. 이 환경엔 Docker가 없어 빌드 자체는 못 해봤고, 경로/임포트 구조만 코드로 검증함 — 로컬에서 직접 확인 필요
 - [x] Cpk/Ppk + SPC 관리도 추가 (`simulator/spc.py`, `notebooks/10_spc_process_capability.ipynb`) — I-MR 관리도, Western Electric 룰, 21개 파라미터 공정능력지수, SPC 탐지 F1 0.813
 - [x] Hot Lot(긴급 로트) 우선순위 반송 (`amhs/simulation.py`) — 경쟁 없으면 효과 없음(84.0초=83.4초), 경쟁 있으면 hot lot이 31% 빠름(190.5초 vs 276.5초, 15시드 평균) — 우선순위는 자원 경쟁이 있을 때만 의미 있다는 걸 확인
+- [x] AMHS 실제 문헌 근거 보강 (`docs/AMHS.md` §8 참고 문헌) — 실제 논문 6건(Agrawal & Heragu 2006 서베이, Liao & Wang 2005 hot-lot DPD, Wang et al. 2017, Im et al. 헝가리안 알고리즘, 다변수 OHT 스케줄링, 2025 멀티에이전트 RL) 인용, 각각이 구현의 어느 부분과 겹치고 어디서 갈리는지 명시 + 솔직한 한계 서술
 - [ ] Hugging Face Space 실제 배포 (계정 필요, 진행 전 확인)
