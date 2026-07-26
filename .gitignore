@@ -36,6 +36,9 @@ models/*
 !models/spc_capability_summary.csv
 !models/spc_detection_result.csv
 !models/amhs_hot_lot_comparison.csv
+!models/cost_sensitive_threshold_results.csv
+!models/cost_capacity_tradeoff.csv
+!models/cost_threshold_sweep.csv
 
 # One-off legacy conversion venv (see scripts/convert_wm811k.py)
 .venv_legacy/
