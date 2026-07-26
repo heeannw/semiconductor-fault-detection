@@ -1,0 +1,25 @@
+# backend/Dockerfile 빌드 컨텍스트(프로젝트 루트)에서 제외할 것들
+.venv/
+.venv_legacy/
+.git/
+.github/
+.pytest_cache/
+__pycache__/
+*.pyc
+
+data/raw/
+docs/papers/*.pdf
+
+notebooks/
+docs/
+scripts/
+
+frontend/
+amhs/tests/
+backend/tests/
+simulator/tests/
+
+*.db
+*.sqlite3
+.env
+.env.local

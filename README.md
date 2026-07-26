@@ -91,13 +91,19 @@ semiconductor-fault-detection/
 │   ├── raw/            # SECOM 원본 데이터 (git 미추적)
 │   └── processed/      # 전처리 완료 데이터
 ├── docs/
-│   └── papers/         # 참고 논문 PDF
+│   ├── papers/         # 참고 논문 PDF
+│   └── AMHS.md          # AMHS 개념 정리 (SK하이닉스 AMHS 직무 지원용)
 ├── notebooks/          # EDA, 실험용 Jupyter Notebook
 ├── simulator/           # 8대 공정 합성 데이터 생성기
+├── amhs/                # OHT 반송 시뮬레이션, 디스패칭, 예지보전 (AMHS 확장)
 ├── models/              # 학습된 모델 아티팩트
 ├── backend/
-│   └── app/             # FastAPI 서버
-└── frontend/            # React 대시보드
+│   ├── app/              # FastAPI 서버
+│   ├── requirements.txt   # 런타임 전용 슬림 의존성 (Docker 이미지용)
+│   └── Dockerfile
+├── frontend/            # React 대시보드
+│   └── Dockerfile
+└── docker-compose.yml   # 백엔드+프론트엔드 로컬 실행
 ```
 
 ## 📅 6주 로드맵
@@ -247,6 +253,24 @@ SQLite 스키마: `process_logs`, `fault_records`, `model_metrics`
 - 포트폴리오 정리 (시연 영상, 핵심 수치)
 - 시간 남으면 LSTM Autoencoder 추가
 
+#### Docker
+
+로컬에서 백엔드+프론트엔드를 한 번에 띄우기:
+
+```bash
+docker compose up --build
+```
+
+- 백엔드: `http://localhost:8000` (Swagger `/docs`)
+- 프론트엔드: `http://localhost:5173`
+
+`backend/Dockerfile`은 **프로젝트 루트를 빌드 컨텍스트로 쓴다** — `backend/app/main.py`가 루트의 `simulator/`, `amhs/`를 import하기 때문에, `docker build -f backend/Dockerfile .`처럼 루트에서 빌드해야 한다(`docker-compose.yml`이 이미 그렇게 설정돼 있다). 백엔드 이미지는 `backend/requirements.txt`(런타임에 필요한 패키지만 추린 슬림 버전 — torch/matplotlib/jupyter 등 노트북 전용 패키지는 제외)를 쓴다.
+
+**알아둘 것**:
+- `models/`, `data/processed/`에 joblib/csv 아티팩트가 이미 로컬에 있으면(노트북을 먼저 돌렸다면) 이미지에 그대로 포함된다. 없는 상태로 빌드해도 컨테이너는 정상적으로 뜨고, ML 의존 엔드포인트만 503을 반환한다(로컬 실행과 동일한 동작).
+- SQLite DB(`backend/semisense.db`)는 컨테이너 안에 생기므로 컨테이너를 지우면 함께 사라진다(포트폴리오 데모 용도로는 충분하지만, 데이터를 유지하려면 볼륨 마운트가 필요하다).
+- 이 환경에는 Docker가 설치돼 있지 않아 `docker compose up`을 실제로 실행해보지는 못했다 — Dockerfile의 경로/임포트 구조는 꼼꼼히 검토했지만, 로컬에서 한 번 직접 확인해보는 걸 권장한다.
+
 ## ⚠️ 주요 리스크 & 대응
 
 | 리스크 | 대응 방안 |
@@ -290,3 +314,5 @@ SQLite 스키마: `process_logs`, `fault_records`, `model_metrics`
 - [x] 예측 기반 디스패칭 + 예지보전 시뮬레이션 피드백 — 노트북 08/09의 모델을 `amhs/predictive.py`·`amhs/maintenance.py`로 실제 시뮬레이션/대시보드에 연결(평가만 하고 끝나지 않게)
 - [x] GitHub Actions CI 추가 (`.github/workflows/tests.yml`) — push/PR마다 backend pytest + frontend Vitest/build 자동 실행, README 배지
 - [x] 프론트엔드 테스트 추가 (Vitest + React Testing Library) — 13개 테스트, 컴포넌트/페이지/API 실패 시 부분 결과 표시 로직까지 커버
+- [x] Docker화 (`backend/Dockerfile`, `frontend/Dockerfile`, `docker-compose.yml`) — `docker compose up --build`로 로컬 실행. 이 환경엔 Docker가 없어 빌드 자체는 못 해봤고, 경로/임포트 구조만 코드로 검증함 — 로컬에서 직접 확인 필요
+- [ ] Hugging Face Space 실제 배포 (계정 필요, 진행 전 확인)
