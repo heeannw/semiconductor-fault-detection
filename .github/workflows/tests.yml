@@ -47,3 +47,34 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build and start containers
+        run: docker compose up --build -d
+
+      - name: Wait for backend health check
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8000/api/health; then
+              echo "backend is up"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "backend never became healthy"
+          exit 1
+
+      - name: Check frontend responds
+        run: curl -sf http://localhost:5173/ > /dev/null
+
+      - name: Show logs on failure
+        if: failure()
+        run: docker compose logs
+
+      - name: Tear down
+        if: always()
+        run: docker compose down
