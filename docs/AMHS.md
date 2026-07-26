@@ -1,5 +1,7 @@
 # AMHS 개념 정리 & 이 프로젝트의 매핑
 
+*[English version](AMHS.en.md)*
+
 SK하이닉스 AMHS 직무 면접 준비용으로 작성. AMHS(Automated Material Handling System)는 반도체 fab 내에서
 웨이퍼(FOUP)를 공정 장비 사이로 자동 운반하는 물류 시스템이다. `amhs/` 모듈과 `notebooks/07~09`는 이 개념들을
 직접 구현하며 이해도를 다진 결과물이다. 디스패칭 정책은 스스로 만들어본 것이지만, 그 설계가 실제 연구/업계

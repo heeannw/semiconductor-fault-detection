@@ -2,6 +2,8 @@
 
 [![tests](https://github.com/heeannw/semiconductor-fault-detection/actions/workflows/tests.yml/badge.svg)](https://github.com/heeannw/semiconductor-fault-detection/actions/workflows/tests.yml)
 
+*[English version](README.en.md)*
+
 Semiconductor Process Simulator & Fault Detection AI
 
 - **기간:** 6주
@@ -151,7 +153,7 @@ semiconductor-fault-detection/
 
 > ⚠️ LSTM은 튜닝 시간이 길어 6주 내 완성 리스크 높음. IF + XGBoost만으로도 포트폴리오 충분히 강함.
 
-#### 실측 결과 (`notebooks/03_modeling.ipynb`, test set 313개, 최초 1회 평가)
+#### 실측 결과 (`notebooks/03_modeling.ipynb`, test set 314개, 최초 1회 평가)
 
 | 모델 | Precision | Recall | F1 | AUROC |
 |---|---|---|---|---|
