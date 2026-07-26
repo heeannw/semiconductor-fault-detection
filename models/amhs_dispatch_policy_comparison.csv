@@ -1,4 +1,5 @@
-policy,completion_rate,avg_cycle_time_sec,p95_cycle_time_sec,avg_vehicle_utilization
-nearest_vehicle,1.0,366.7,633.0,0.5571
-fcfs,1.0,403.8,676.3,0.6123
-zone_based,1.0,349.5,606.1,0.5812
+policy,completion_rate,avg_cycle_time_sec,p95_cycle_time_sec,avg_vehicle_utilization,max_queue_length
+nearest_vehicle,1.0,91.4,197.8,0.0473,4
+fcfs,1.0,175.1,306.9,0.0894,4
+zone_based,1.0,115.7,270.5,0.06,3
+predictive,1.0,91.4,197.8,0.0473,4

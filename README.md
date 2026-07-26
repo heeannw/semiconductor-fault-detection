@@ -281,7 +281,7 @@ SQLite 스키마: `process_logs`, `fault_records`, `model_metrics`
 - [x] LSTM Autoencoder 추가 (`notebooks/05_lstm_autoencoder.ipynb`) — 공정 시뮬레이터 시계열 대상, 공정별 개별 모델, 마지막 시점 재구성 오류 방식으로 평균 F1 0.955 달성
 - [x] WM-811K 웨이퍼맵 CNN 분류기 추가 (`notebooks/06_wafer_map_cnn.ipynb`) — 결함 패턴 8종 분류, test accuracy 0.605 / macro F1 0.664
 - [x] AMHS 개념 정리 (`docs/AMHS.md`) — OHT/스토커/디스패칭 등 핵심 용어, 프로젝트 매핑, 면접 답변 메모
-- [x] OHT/스토커 물류 시뮬레이션 (`amhs/`, `notebooks/07_amhs_dispatch_simulation.ipynb`) — SimPy 이산사건 시뮬레이션, 디스패칭 정책 3종 비교(구역기반 349.5초 < 최근접 366.7초 < FCFS 403.8초), 차량 대수 민감도(6~8대에서 한계효용 체감)
+- [x] OHT/스토커 물류 시뮬레이션 (`amhs/`, `notebooks/07_amhs_dispatch_simulation.ipynb`) — SimPy 이산사건 시뮬레이션, 설비 대기열 길이를 스토커 점유량으로 쓰는 back-pressure, 디스패칭 정책 4종 비교(최근접 91.4초 < 구역기반 115.7초 < FCFS 175.1초, 예측 기반은 저부하에서 최근접과 동일하게 판단), 차량 대수 민감도(6~8대에서 한계효용 체감), 스토커 용량이 작을수록 평균 반송 시간이 짧아지는 WIP 효과, 예지보전 피드백 적용 시 평균 반송 시간 6.7%↑ (15시드 평균)
 - [x] 반송 지연 예측 (`notebooks/08_amhs_delay_prediction.ipynb`) — run-level split, R² 0.933 / 지연 분류 F1 0.947, 실시간 시스템 부하가 정적 거리보다 압도적으로 중요
 - [x] OHT 차량 예지보전 (`amhs/vehicle_health_simulator.py`, `notebooks/09_amhs_predictive_maintenance.ipynb`) — SECOM 파이프라인(IF+XGBoost+SHAP)을 차량 센서 도메인에 재적용
 - [x] 대시보드 AMHS 화면 추가 — `POST /api/amhs/simulate`로 디스패칭 정책 비교/차량 대수 민감도를 실시간 실행, 브라우저에서 동작 확인

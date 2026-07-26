@@ -1,0 +1,5 @@
+stocker_capacity,completion_rate,avg_cycle_time_sec,max_queue_length
+1,1.0,98.6,3
+2,1.0,102.4,4
+3,1.0,102.4,4
+5,1.0,102.4,4
