@@ -1,3 +1,5 @@
+import numpy as np
+
 from amhs import fcfs_dispatch, nearest_vehicle_dispatch, run_simulation, zone_based_dispatch
 
 
@@ -71,3 +73,33 @@ def test_stocker_capacity_affects_observed_queue_length():
     assert tight["max_queue_length"] != loose["max_queue_length"]
     assert tight["max_queue_length"] >= 0
     assert loose["max_queue_length"] >= 0
+
+
+def test_transport_log_has_hot_lot_column():
+    result = run_simulation(n_vehicles=3, n_foups=6, n_laps=1, hot_lot_ratio=0.3, dispatch_policy=nearest_vehicle_dispatch, seed=1)
+    assert "is_hot_lot" in result["transport_log"].columns
+    assert result["transport_log"]["is_hot_lot"].isin([True, False]).all()
+
+
+def test_zero_hot_lot_ratio_produces_no_hot_lots():
+    result = run_simulation(n_vehicles=3, n_foups=6, n_laps=1, hot_lot_ratio=0.0, dispatch_policy=nearest_vehicle_dispatch, seed=1)
+    assert not result["transport_log"]["is_hot_lot"].any()
+    assert np.isnan(result["avg_hot_lot_cycle_time_sec"])
+
+
+def test_hot_lots_get_shorter_cycle_time_under_contention():
+    """대기 경쟁이 없으면(차량 여유) hot lot이든 아니든 순서를 바꿀 게 없어 차이가 안 난다 —
+    그래서 일부러 차량을 적게, 투입 간격을 짧게 줘서 여러 반송 요청이 동시에 대기하는
+    상황을 만든다. 노이즈를 줄이려고 여러 시드에 걸쳐 평균낸다."""
+    hot_means, normal_means = [], []
+    for seed in range(15):
+        result = run_simulation(
+            n_vehicles=2, n_foups=20, n_laps=1, foup_launch_interval_sec=20.0,
+            hot_lot_ratio=0.3, dispatch_policy=nearest_vehicle_dispatch, seed=seed,
+        )
+        if result["completion_rate"] == 1.0:
+            hot_means.append(result["avg_hot_lot_cycle_time_sec"])
+            normal_means.append(result["avg_normal_lot_cycle_time_sec"])
+
+    assert len(hot_means) >= 5  # 완료율 1.0인 실행이 충분히 있어야 비교가 의미 있다
+    assert np.nanmean(hot_means) < np.nanmean(normal_means)

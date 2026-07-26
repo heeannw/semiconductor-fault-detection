@@ -281,6 +281,8 @@ def amhs_simulate(req: AmhsSimulateRequest):
         raise HTTPException(status_code=400, detail="n_foups must be between 1 and 100")
     if not (1 <= req.stocker_capacity <= 20):
         raise HTTPException(status_code=400, detail="stocker_capacity must be between 1 and 20")
+    if not (0.0 <= req.hot_lot_ratio <= 1.0):
+        raise HTTPException(status_code=400, detail="hot_lot_ratio must be between 0.0 and 1.0")
 
     if req.policy == "predictive":
         if not amhs.delay_model_available():
@@ -300,9 +302,14 @@ def amhs_simulate(req: AmhsSimulateRequest):
         n_laps=req.n_laps,
         foup_launch_interval_sec=req.foup_launch_interval_sec,
         stocker_capacity=req.stocker_capacity,
+        hot_lot_ratio=req.hot_lot_ratio,
         dispatch_policy=dispatch_policy,
         seed=req.seed,
     )
+
+    def _clean(value: float) -> float | None:
+        return None if value != value else value  # NaN != NaN
+
     return AmhsSimulateResponse(
         policy=req.policy,
         n_vehicles=req.n_vehicles,
@@ -310,6 +317,8 @@ def amhs_simulate(req: AmhsSimulateRequest):
         avg_cycle_time_sec=result["avg_cycle_time_sec"],
         p95_cycle_time_sec=result["p95_cycle_time_sec"],
         avg_vehicle_utilization=result["avg_vehicle_utilization"],
+        avg_hot_lot_cycle_time_sec=_clean(result["avg_hot_lot_cycle_time_sec"]),
+        avg_normal_lot_cycle_time_sec=_clean(result["avg_normal_lot_cycle_time_sec"]),
         max_queue_length=result["max_queue_length"],
         completed_transports=result["completed_transports"],
     )

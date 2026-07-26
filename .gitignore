@@ -35,6 +35,7 @@ models/*
 !models/amhs_maintenance_comparison.csv
 !models/spc_capability_summary.csv
 !models/spc_detection_result.csv
+!models/amhs_hot_lot_comparison.csv
 
 # One-off legacy conversion venv (see scripts/convert_wm811k.py)
 .venv_legacy/

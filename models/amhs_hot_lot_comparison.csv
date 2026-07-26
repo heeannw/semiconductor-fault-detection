@@ -1,0 +1,3 @@
+scenario,hot_lot_avg_sec,normal_lot_avg_sec
+"경쟁 있음(차량 2대, 20초 간격)",190.5,276.5
+경쟁 거의 없음(기본 시나리오),84.0,83.4

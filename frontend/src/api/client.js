@@ -43,14 +43,14 @@ export const api = {
   amhsStations: () => request("/api/amhs/stations"),
   amhsSimulate: ({
     nVehicles = 5, nFoups = 20, nLaps = 2, foupLaunchIntervalSec = 150.0,
-    stockerCapacity = 2, policy = "nearest", seed = 42,
+    stockerCapacity = 2, hotLotRatio = 0.0, policy = "nearest", seed = 42,
   }) =>
     request("/api/amhs/simulate", {
       method: "POST",
       body: JSON.stringify({
         n_vehicles: nVehicles, n_foups: nFoups, n_laps: nLaps,
         foup_launch_interval_sec: foupLaunchIntervalSec,
-        stocker_capacity: stockerCapacity, policy, seed,
+        stocker_capacity: stockerCapacity, hot_lot_ratio: hotLotRatio, policy, seed,
       }),
     }),
 };

@@ -13,7 +13,8 @@ vi.mock("../api/client.js", () => ({
 const FAKE_RESULT = {
   policy: "nearest", n_vehicles: 5, completion_rate: 1.0,
   avg_cycle_time_sec: 91.4, p95_cycle_time_sec: 197.8,
-  avg_vehicle_utilization: 0.047, max_queue_length: 4, completed_transports: 70,
+  avg_vehicle_utilization: 0.047, avg_hot_lot_cycle_time_sec: null,
+  avg_normal_lot_cycle_time_sec: null, max_queue_length: 4, completed_transports: 70,
 };
 
 describe("Amhs page", () => {
@@ -42,6 +43,24 @@ describe("Amhs page", () => {
     });
     const calledPolicies = api.amhsSimulate.mock.calls.map(([arg]) => arg.policy);
     expect(calledPolicies.sort()).toEqual(["fcfs", "nearest", "predictive", "zone"].sort());
+  });
+
+  it("shows hot/normal lot columns only after a non-zero hot lot ratio is set", async () => {
+    api.amhsSimulate.mockResolvedValue({ ...FAKE_RESULT, avg_hot_lot_cycle_time_sec: 190, avg_normal_lot_cycle_time_sec: 276 });
+    const user = userEvent.setup();
+    render(<Amhs />);
+
+    expect(screen.queryByText("Hot Lot 평균")).not.toBeInTheDocument();
+
+    const hotLotInput = screen.getByLabelText("Hot Lot 비율");
+    await user.clear(hotLotInput);
+    await user.type(hotLotInput, "0.3");
+    await user.click(screen.getByRole("button", { name: "디스패칭 정책 비교 실행" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Hot Lot 평균")).toBeInTheDocument();
+      expect(screen.getAllByText("190초").length).toBeGreaterThan(0);
+    });
   });
 
   it("shows a partial result and an error banner when one policy call fails", async () => {

@@ -17,6 +17,12 @@ OHT 차량이 담당한다. 차량 배정(디스패칭) 정책을 바꿔가며 �
 단순화를 위해 디스패처는 "유휴 차량이 생겼는지"를 1초 간격으로 폴링한다.
 실제 MCS는 이벤트 기반으로 즉시 반응하지만, 이 정도 규모(차량 수십 대 이하)의
 시뮬레이션에서는 폴링 방식이 훨씬 읽기 쉽고 결과 차이도 무시할 수 있는 수준이다.
+
+**Hot Lot(긴급 로트)**: 실제 fab은 모든 FOUP을 동등하게 처리하지 않는다 — 납기가 급하거나
+문제를 조기에 확인해야 하는 로트는 우선순위를 받는다. `hot_lot_ratio > 0`이면 그 비율만큼의
+FOUP이 "hot lot"으로 태어나, 대기 중인 반송 요청이 여러 개일 때 일반 로트보다 먼저 배정된다.
+이걸 구현하려고 반송 요청 큐를 `simpy.Store`(순수 FIFO)에서 디스패처가 직접 우선순위로 골라
+꺼내는 리스트로 바꿨다 — FIFO 큐는 "먼저 온 순서"만 알 뿐 "더 급한 것"이라는 개념이 없다.
 """
 from __future__ import annotations
 
@@ -55,6 +61,7 @@ class TransportRequest:
     created_at: float
     picked_up_event: simpy.Event
     done_event: simpy.Event
+    is_hot_lot: bool = False
     assigned_vehicle_id: int | None = None
 
 
@@ -94,11 +101,12 @@ def _foup_process(
     env: simpy.Environment,
     foup_id: int,
     station_resources: dict[str, simpy.Resource],
-    request_queue: simpy.Store,
+    pending_requests: list[TransportRequest],
     rng: np.random.Generator,
     transport_log: list[dict],
     n_laps: int,
     wip_resource: simpy.Resource,
+    is_hot_lot: bool,
 ):
     # 순환 레이아웃 + 용량 제한 스토커는 WIP(동시 투입량)가 너무 많으면 서로 물려 교착상태에
     # 빠질 수 있다(모든 대기열이 꽉 차 아무도 못 움직이는 상태) — 실제 fab에서 CONWIP(Constant
@@ -106,17 +114,18 @@ def _foup_process(
     # `wip_resource`로 제한한다.
     with wip_resource.request() as wip_req:
         yield wip_req
-        yield from _foup_journey(env, foup_id, station_resources, request_queue, rng, transport_log, n_laps)
+        yield from _foup_journey(env, foup_id, station_resources, pending_requests, rng, transport_log, n_laps, is_hot_lot)
 
 
 def _foup_journey(
     env: simpy.Environment,
     foup_id: int,
     station_resources: dict[str, simpy.Resource],
-    request_queue: simpy.Store,
+    pending_requests: list[TransportRequest],
     rng: np.random.Generator,
     transport_log: list[dict],
     n_laps: int,
+    is_hot_lot: bool,
 ):
     station = STATION_ORDER[0]
     total_steps = n_laps * len(STATION_ORDER)
@@ -142,8 +151,9 @@ def _foup_journey(
                 created_at=env.now,
                 picked_up_event=picked_up_event,
                 done_event=done_event,
+                is_hot_lot=is_hot_lot,
             )
-            yield request_queue.put(request)
+            pending_requests.append(request)
             # OHT가 실제로 집어들 때까지 설비를 놓지 않는다 — 다음 FOUP을 못 받으므로
             # 이게 바로 back-pressure가 상류로 전파되는 지점이다.
             yield picked_up_event
@@ -159,25 +169,36 @@ def _foup_journey(
             "completed_at": env.now,
             "cycle_time_sec": env.now - request.created_at,
             "vehicle_id": request.assigned_vehicle_id,
+            "is_hot_lot": is_hot_lot,
         })
         station = destination
 
 
+def _next_request(pending_requests: list[TransportRequest]) -> TransportRequest:
+    """hot lot을 우선(그중에서는 먼저 생성된 순), 아니면 그냥 먼저 생성된 순."""
+    return min(pending_requests, key=lambda r: (not r.is_hot_lot, r.created_at))
+
+
 def _dispatcher_process(
     env: simpy.Environment,
-    request_queue: simpy.Store,
+    pending_requests: list[TransportRequest],
     vehicles: list[Vehicle],
     station_resources: dict[str, simpy.Resource],
     stocker_capacity: int,
     dispatch_policy: DispatchPolicy,
 ):
     while True:
-        request = yield request_queue.get()
-        while True:
-            idle = [v for v in vehicles if not v.busy and not v.under_maintenance]
-            if idle:
-                break
+        if not pending_requests:
             yield env.timeout(DISPATCH_POLL_INTERVAL_SEC)
+            continue
+
+        idle = [v for v in vehicles if not v.busy and not v.under_maintenance]
+        if not idle:
+            yield env.timeout(DISPATCH_POLL_INTERVAL_SEC)
+            continue
+
+        request = _next_request(pending_requests)
+        pending_requests.remove(request)
 
         chosen = dispatch_policy(request, idle, vehicles)
         chosen.busy = True
@@ -245,6 +266,7 @@ def run_simulation(
     foup_launch_interval_sec: float = 150.0,
     stocker_capacity: int = DEFAULT_STOCKER_CAPACITY,
     max_wip: int | None = None,
+    hot_lot_ratio: float = 0.0,
     congestion_sample_interval_sec: float = DEFAULT_CONGESTION_SAMPLE_INTERVAL_SEC,
     maintenance_process: Callable | None = None,
     seed: int = 42,
@@ -254,6 +276,8 @@ def run_simulation(
     `max_wip`: 동시에 시스템 안에 있을 수 있는 FOUP 수 상한(CONWIP). `None`이면
     `len(STATION_ORDER) * stocker_capacity`(전체 스토커 용량)로 자동 설정 — 순환 레이아웃에서
     모든 대기열이 꽉 차 교착상태에 빠지는 것을 막는 안전장치다.
+    `hot_lot_ratio`: 이 비율만큼의 FOUP이 hot lot(긴급 로트)으로 태어나, 반송 대기 중일 때
+    일반 로트보다 먼저 배정된다.
     `maintenance_process`: `(env, vehicles, rng) -> Generator`를 넘기면 추가 SimPy 프로세스로
     등록된다 — 예지보전 피드백(주기적으로 차량 상태를 점검해 이상 시 운행 중단)을 여기에 꽂는다.
     """
@@ -265,7 +289,7 @@ def run_simulation(
 
     env = simpy.Environment()
     station_resources = {name: simpy.Resource(env, capacity=1) for name in STATION_ORDER}
-    request_queue = simpy.Store(env)
+    pending_requests: list[TransportRequest] = []
     wip_resource = simpy.Resource(env, capacity=max_wip)
 
     vehicles = [
@@ -278,11 +302,14 @@ def run_simulation(
 
     def launch_foups():
         for foup_id in range(n_foups):
-            env.process(_foup_process(env, foup_id, station_resources, request_queue, rng, transport_log, n_laps, wip_resource))
+            is_hot_lot = bool(rng.random() < hot_lot_ratio)
+            env.process(_foup_process(
+                env, foup_id, station_resources, pending_requests, rng, transport_log, n_laps, wip_resource, is_hot_lot,
+            ))
             yield env.timeout(rng.exponential(foup_launch_interval_sec))
 
     env.process(launch_foups())
-    env.process(_dispatcher_process(env, request_queue, vehicles, station_resources, stocker_capacity, dispatch_policy))
+    env.process(_dispatcher_process(env, pending_requests, vehicles, station_resources, stocker_capacity, dispatch_policy))
     env.process(_congestion_sampler(env, station_resources, vehicles, congestion_log, congestion_sample_interval_sec))
     if maintenance_process is not None:
         env.process(maintenance_process(env, vehicles, rng))
@@ -307,6 +334,9 @@ def run_simulation(
         for v in vehicles
     }
 
+    hot_log = log_df[log_df["is_hot_lot"]] if len(log_df) and "is_hot_lot" in log_df else log_df.iloc[0:0]
+    normal_log = log_df[~log_df["is_hot_lot"]] if len(log_df) and "is_hot_lot" in log_df else log_df
+
     return {
         "transport_log": log_df,
         "congestion_log": congestion_df,
@@ -315,6 +345,8 @@ def run_simulation(
         "avg_vehicle_utilization": float(np.mean(list(utilization.values()))) if utilization else 0.0,
         "avg_cycle_time_sec": float(log_df["cycle_time_sec"].mean()) if len(log_df) else float("nan"),
         "p95_cycle_time_sec": float(log_df["cycle_time_sec"].quantile(0.95)) if len(log_df) else float("nan"),
+        "avg_hot_lot_cycle_time_sec": float(hot_log["cycle_time_sec"].mean()) if len(hot_log) else float("nan"),
+        "avg_normal_lot_cycle_time_sec": float(normal_log["cycle_time_sec"].mean()) if len(normal_log) else float("nan"),
         "max_queue_length": int(congestion_df["queue_length"].max()) if len(congestion_df) else 0,
         "completed_transports": len(log_df),
         "expected_transports": n_foups * (n_laps * len(STATION_ORDER) - 1),

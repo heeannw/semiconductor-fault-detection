@@ -28,6 +28,7 @@ export default function Amhs() {
   const [nFoups, setNFoups] = useState(10);
   const [nLaps, setNLaps] = useState(1);
   const [stockerCapacity, setStockerCapacity] = useState(2);
+  const [hotLotRatio, setHotLotRatio] = useState(0);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState(null);
   const [policyResults, setPolicyResults] = useState(null);
@@ -41,7 +42,7 @@ export default function Amhs() {
     try {
       const settled = await Promise.allSettled(
         POLICIES.map((p) =>
-          api.amhsSimulate({ nVehicles, nFoups, nLaps, stockerCapacity, policy: p.key }).then((r) => ({ ...r, label: p.label })),
+          api.amhsSimulate({ nVehicles, nFoups, nLaps, stockerCapacity, hotLotRatio, policy: p.key }).then((r) => ({ ...r, label: p.label })),
         ),
       );
       const results = settled.filter((s) => s.status === "fulfilled").map((s) => s.value);
@@ -103,6 +104,10 @@ export default function Amhs() {
             스토커 용량
             <input type="number" min="1" max="20" value={stockerCapacity} onChange={(e) => setStockerCapacity(Number(e.target.value))} style={{ width: 56 }} />
           </label>
+          <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
+            Hot Lot 비율
+            <input type="number" min="0" max="1" step="0.1" value={hotLotRatio} onChange={(e) => setHotLotRatio(Number(e.target.value))} style={{ width: 56 }} />
+          </label>
           <button onClick={runPolicyComparison} disabled={running}>
             {running ? "실행 중..." : "디스패칭 정책 비교 실행"}
           </button>
@@ -134,7 +139,10 @@ export default function Amhs() {
           </ResponsiveContainer>
           <table style={{ marginTop: 12 }}>
             <thead>
-              <tr><th>정책</th><th>완료율</th><th>P95 반송 시간</th><th>평균 가동률</th><th>최대 큐 길이</th></tr>
+              <tr>
+                <th>정책</th><th>완료율</th><th>P95 반송 시간</th><th>평균 가동률</th><th>최대 큐 길이</th>
+                {hotLotRatio > 0 && <><th>Hot Lot 평균</th><th>일반 Lot 평균</th></>}
+              </tr>
             </thead>
             <tbody>
               {policyResults.map((r) => (
@@ -144,6 +152,12 @@ export default function Amhs() {
                   <td>{r.p95_cycle_time_sec.toFixed(0)}초</td>
                   <td>{(r.avg_vehicle_utilization * 100).toFixed(1)}%</td>
                   <td>{r.max_queue_length}</td>
+                  {hotLotRatio > 0 && (
+                    <>
+                      <td>{r.avg_hot_lot_cycle_time_sec != null ? `${r.avg_hot_lot_cycle_time_sec.toFixed(0)}초` : "–"}</td>
+                      <td>{r.avg_normal_lot_cycle_time_sec != null ? `${r.avg_normal_lot_cycle_time_sec.toFixed(0)}초` : "–"}</td>
+                    </>
+                  )}
                 </tr>
               ))}
             </tbody>

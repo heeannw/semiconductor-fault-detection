@@ -13,6 +13,22 @@ def test_amhs_simulate_nearest(client):
     assert body["completion_rate"] == 1.0
     assert body["avg_cycle_time_sec"] > 0
     assert body["max_queue_length"] >= 0
+    assert body["avg_hot_lot_cycle_time_sec"] is None  # hot_lot_ratio 기본값 0
+
+
+def test_amhs_simulate_with_hot_lots(client):
+    res = client.post(
+        "/api/amhs/simulate",
+        json={"n_vehicles": 2, "n_foups": 8, "n_laps": 1, "foup_launch_interval_sec": 20.0, "hot_lot_ratio": 0.3},
+    )
+    assert res.status_code == 200
+    body = res.json()
+    assert body["avg_hot_lot_cycle_time_sec"] is not None or body["avg_normal_lot_cycle_time_sec"] is not None
+
+
+def test_amhs_simulate_rejects_out_of_range_hot_lot_ratio(client):
+    res = client.post("/api/amhs/simulate", json={"hot_lot_ratio": 1.5})
+    assert res.status_code == 400
 
 
 def test_amhs_simulate_predictive_policy(client, requires_delay_model):
