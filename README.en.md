@@ -274,7 +274,7 @@ docker compose up --build
 **Worth knowing**:
 - If `models/` and `data/processed/` already have joblib/CSV artifacts locally (i.e. you've run the notebooks), they're baked into the image. Without them, the container still starts fine and only the ML-dependent endpoints return 503 — same behavior as running locally without a trained model.
 - The SQLite DB (`backend/semisense.db`) lives inside the container and is lost when the container is removed — fine for a portfolio demo, but would need a volume mount to persist data.
-- **This has not been verified against an actual Docker build** — Docker isn't installed in the environment this was built in. The Dockerfile paths and import structure were carefully traced by hand, but a local `docker compose up` run is recommended before relying on it.
+- **Verified in CI, not locally** — the local dev environment this was built in has no WSL2/Hyper-V, so `docker compose up` couldn't be run there directly. Instead, the `docker-build` job in `.github/workflows/tests.yml` runs `docker compose up --build` on GitHub Actions' Docker-native ubuntu runners on every push, and checks both the backend health endpoint (`/api/health`) and the frontend response — arguably more thorough than a single local run, since it's re-verified on every change.
 
 ## 💡 Interview talking points
 
@@ -305,9 +305,9 @@ docker compose up --build
 - [x] OHT vehicle predictive maintenance (`amhs/vehicle_health_simulator.py`, `notebooks/09`) — SECOM's IF+XGBoost+SHAP pipeline reapplied to vehicle sensor data
 - [x] AMHS dashboard screen — live dispatch-policy comparison and vehicle-count sensitivity
 - [x] Predictive dispatching + predictive-maintenance feedback wired into the live simulation/dashboard (not left as notebook-only evaluation)
-- [x] GitHub Actions CI — backend pytest + frontend Vitest/build on every push/PR
+- [x] GitHub Actions CI — backend pytest + frontend Vitest/build + Docker build/health-check on every push/PR
 - [x] Frontend tests (Vitest + React Testing Library) — 13 tests, including partial-failure UI states
-- [x] Dockerized (`backend/Dockerfile`, `frontend/Dockerfile`, `docker-compose.yml`) — not verified against an actual Docker build in this environment
+- [x] Dockerized (`backend/Dockerfile`, `frontend/Dockerfile`, `docker-compose.yml`) — verified via a `docker-build` CI job (build + health check + frontend response) on every push, since the local dev environment has no WSL2/Hyper-V
 - [x] Cpk/Ppk + SPC control charts (`simulator/spc.py`, `notebooks/10`) — I-MR charts, Western Electric rules, capability indices for 21 parameters, SPC detection F1 0.813
 - [x] Hot lot priority dispatching (`amhs/simulation.py`) — no effect without contention (84.0s vs 83.4s), 31% faster under contention (190.5s vs 276.5s, averaged over 15 seeds) — priority only matters when there's actual resource contention
 - [x] Real literature grounding for AMHS dispatch design (`docs/AMHS.md` §8) — 6 real papers cited, each mapped to what it does/doesn't correspond to in this implementation

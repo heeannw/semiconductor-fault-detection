@@ -289,7 +289,7 @@ docker compose up --build
 **알아둘 것**:
 - `models/`, `data/processed/`에 joblib/csv 아티팩트가 이미 로컬에 있으면(노트북을 먼저 돌렸다면) 이미지에 그대로 포함된다. 없는 상태로 빌드해도 컨테이너는 정상적으로 뜨고, ML 의존 엔드포인트만 503을 반환한다(로컬 실행과 동일한 동작).
 - SQLite DB(`backend/semisense.db`)는 컨테이너 안에 생기므로 컨테이너를 지우면 함께 사라진다(포트폴리오 데모 용도로는 충분하지만, 데이터를 유지하려면 볼륨 마운트가 필요하다).
-- 이 환경에는 Docker가 설치돼 있지 않아 `docker compose up`을 실제로 실행해보지는 못했다 — Dockerfile의 경로/임포트 구조는 꼼꼼히 검토했지만, 로컬에서 한 번 직접 확인해보는 걸 권장한다.
+- 로컬 개발 환경에는 WSL2/Hyper-V가 없어 `docker compose up`을 직접 실행해보지는 못했다. 대신 `.github/workflows/tests.yml`의 `docker-build` job이 GitHub Actions의 ubuntu 러너(Docker 기본 내장)에서 매 push마다 실제로 `docker compose up --build`를 실행하고, 백엔드 헬스체크(`/api/health`)와 프론트엔드 응답까지 확인한다 — 로컬 1회성 확인보다 오히려 지속적으로 검증되는 셈이다.
 
 ## ⚠️ 주요 리스크 & 대응
 
@@ -332,9 +332,9 @@ docker compose up --build
 - [x] OHT 차량 예지보전 (`amhs/vehicle_health_simulator.py`, `notebooks/09_amhs_predictive_maintenance.ipynb`) — SECOM 파이프라인(IF+XGBoost+SHAP)을 차량 센서 도메인에 재적용
 - [x] 대시보드 AMHS 화면 추가 — `POST /api/amhs/simulate`로 디스패칭 정책 비교/차량 대수 민감도를 실시간 실행, 브라우저에서 동작 확인
 - [x] 예측 기반 디스패칭 + 예지보전 시뮬레이션 피드백 — 노트북 08/09의 모델을 `amhs/predictive.py`·`amhs/maintenance.py`로 실제 시뮬레이션/대시보드에 연결(평가만 하고 끝나지 않게)
-- [x] GitHub Actions CI 추가 (`.github/workflows/tests.yml`) — push/PR마다 backend pytest + frontend Vitest/build 자동 실행, README 배지
+- [x] GitHub Actions CI 추가 (`.github/workflows/tests.yml`) — push/PR마다 backend pytest + frontend Vitest/build + Docker 빌드/헬스체크 자동 실행, README 배지
 - [x] 프론트엔드 테스트 추가 (Vitest + React Testing Library) — 13개 테스트, 컴포넌트/페이지/API 실패 시 부분 결과 표시 로직까지 커버
-- [x] Docker화 (`backend/Dockerfile`, `frontend/Dockerfile`, `docker-compose.yml`) — `docker compose up --build`로 로컬 실행. 이 환경엔 Docker가 없어 빌드 자체는 못 해봤고, 경로/임포트 구조만 코드로 검증함 — 로컬에서 직접 확인 필요
+- [x] Docker화 (`backend/Dockerfile`, `frontend/Dockerfile`, `docker-compose.yml`) — `docker compose up --build`로 로컬 실행. 로컬 개발 환경엔 WSL2/Hyper-V가 없어 직접 빌드는 못 해봤지만, CI(`docker-build` job, GitHub Actions ubuntu 러너)에서 실제 빌드 + 헬스체크 + 프론트엔드 응답 확인까지 매 push마다 검증
 - [x] Cpk/Ppk + SPC 관리도 추가 (`simulator/spc.py`, `notebooks/10_spc_process_capability.ipynb`) — I-MR 관리도, Western Electric 룰, 21개 파라미터 공정능력지수, SPC 탐지 F1 0.813
 - [x] Hot Lot(긴급 로트) 우선순위 반송 (`amhs/simulation.py`) — 경쟁 없으면 효과 없음(84.0초=83.4초), 경쟁 있으면 hot lot이 31% 빠름(190.5초 vs 276.5초, 15시드 평균) — 우선순위는 자원 경쟁이 있을 때만 의미 있다는 걸 확인
 - [x] AMHS 실제 문헌 근거 보강 (`docs/AMHS.md` §8 참고 문헌) — 실제 논문 6건(Agrawal & Heragu 2006 서베이, Liao & Wang 2005 hot-lot DPD, Wang et al. 2017, Im et al. 헝가리안 알고리즘, 다변수 OHT 스케줄링, 2025 멀티에이전트 RL) 인용, 각각이 구현의 어느 부분과 겹치고 어디서 갈리는지 명시 + 솔직한 한계 서술
