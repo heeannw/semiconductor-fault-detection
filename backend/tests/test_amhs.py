@@ -12,6 +12,18 @@ def test_amhs_simulate_nearest(client):
     body = res.json()
     assert body["completion_rate"] == 1.0
     assert body["avg_cycle_time_sec"] > 0
+    assert body["max_queue_length"] >= 0
+
+
+def test_amhs_simulate_predictive_policy(client, requires_delay_model):
+    res = client.post("/api/amhs/simulate", json={"n_vehicles": 4, "n_foups": 8, "n_laps": 1, "policy": "predictive"})
+    assert res.status_code == 200
+    assert res.json()["policy"] == "predictive"
+
+
+def test_amhs_simulate_rejects_out_of_range_stocker_capacity(client):
+    res = client.post("/api/amhs/simulate", json={"stocker_capacity": 0})
+    assert res.status_code == 400
 
 
 def test_amhs_simulate_all_policies(client):

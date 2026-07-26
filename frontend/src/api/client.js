@@ -41,9 +41,16 @@ export const api = {
   featureImportance: (topN = 20) => request(`/api/model/feature-importance?top_n=${topN}`),
 
   amhsStations: () => request("/api/amhs/stations"),
-  amhsSimulate: ({ nVehicles = 5, nFoups = 20, nLaps = 2, policy = "nearest", seed = 42 }) =>
+  amhsSimulate: ({
+    nVehicles = 5, nFoups = 20, nLaps = 2, foupLaunchIntervalSec = 150.0,
+    stockerCapacity = 2, policy = "nearest", seed = 42,
+  }) =>
     request("/api/amhs/simulate", {
       method: "POST",
-      body: JSON.stringify({ n_vehicles: nVehicles, n_foups: nFoups, n_laps: nLaps, policy, seed }),
+      body: JSON.stringify({
+        n_vehicles: nVehicles, n_foups: nFoups, n_laps: nLaps,
+        foup_launch_interval_sec: foupLaunchIntervalSec,
+        stocker_capacity: stockerCapacity, policy, seed,
+      }),
     }),
 };

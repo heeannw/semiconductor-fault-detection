@@ -272,18 +272,35 @@ def amhs_stations():
 
 @app.post("/api/amhs/simulate", response_model=AmhsSimulateResponse)
 def amhs_simulate(req: AmhsSimulateRequest):
-    if req.policy not in AMHS_POLICIES:
-        raise HTTPException(status_code=400, detail=f"Unknown policy: {req.policy}. Valid: {list(AMHS_POLICIES)}")
+    valid_policies = list(AMHS_POLICIES) + ["predictive"]
+    if req.policy not in valid_policies:
+        raise HTTPException(status_code=400, detail=f"Unknown policy: {req.policy}. Valid: {valid_policies}")
     if not (1 <= req.n_vehicles <= 20):
         raise HTTPException(status_code=400, detail="n_vehicles must be between 1 and 20")
     if not (1 <= req.n_foups <= 100):
         raise HTTPException(status_code=400, detail="n_foups must be between 1 and 100")
+    if not (1 <= req.stocker_capacity <= 20):
+        raise HTTPException(status_code=400, detail="stocker_capacity must be between 1 and 20")
+
+    if req.policy == "predictive":
+        if not amhs.delay_model_available():
+            raise HTTPException(
+                status_code=503,
+                detail="지연 예측 모델이 없습니다. notebooks/08_amhs_delay_prediction.ipynb를 먼저 실행하세요.",
+            )
+        dispatch_policy = amhs.make_predictive_dispatch(
+            n_vehicles=req.n_vehicles, launch_interval_sec=req.foup_launch_interval_sec,
+        )
+    else:
+        dispatch_policy = AMHS_POLICIES[req.policy]
 
     result = amhs.run_simulation(
         n_vehicles=req.n_vehicles,
         n_foups=req.n_foups,
         n_laps=req.n_laps,
-        dispatch_policy=AMHS_POLICIES[req.policy],
+        foup_launch_interval_sec=req.foup_launch_interval_sec,
+        stocker_capacity=req.stocker_capacity,
+        dispatch_policy=dispatch_policy,
         seed=req.seed,
     )
     return AmhsSimulateResponse(
@@ -293,6 +310,7 @@ def amhs_simulate(req: AmhsSimulateRequest):
         avg_cycle_time_sec=result["avg_cycle_time_sec"],
         p95_cycle_time_sec=result["p95_cycle_time_sec"],
         avg_vehicle_utilization=result["avg_vehicle_utilization"],
+        max_queue_length=result["max_queue_length"],
         completed_transports=result["completed_transports"],
     )
 

@@ -6,6 +6,7 @@ const POLICIES = [
   { key: "nearest", label: "최근접 차량" },
   { key: "fcfs", label: "FCFS" },
   { key: "zone", label: "구역기반" },
+  { key: "predictive", label: "예측 기반(적응형)" },
 ];
 
 const SENSITIVITY_VEHICLE_COUNTS = [2, 4, 6, 8, 10];
@@ -24,8 +25,9 @@ const VEHICLE_PM_RESULT = [
 
 export default function Amhs() {
   const [nVehicles, setNVehicles] = useState(5);
-  const [nFoups, setNFoups] = useState(20);
-  const [nLaps, setNLaps] = useState(2);
+  const [nFoups, setNFoups] = useState(10);
+  const [nLaps, setNLaps] = useState(1);
+  const [stockerCapacity, setStockerCapacity] = useState(2);
   const [running, setRunning] = useState(false);
   const [error, setError] = useState(null);
   const [policyResults, setPolicyResults] = useState(null);
@@ -37,11 +39,16 @@ export default function Amhs() {
     setRunning(true);
     setError(null);
     try {
-      const results = await Promise.all(
+      const settled = await Promise.allSettled(
         POLICIES.map((p) =>
-          api.amhsSimulate({ nVehicles, nFoups, nLaps, policy: p.key }).then((r) => ({ ...r, label: p.label })),
+          api.amhsSimulate({ nVehicles, nFoups, nLaps, stockerCapacity, policy: p.key }).then((r) => ({ ...r, label: p.label })),
         ),
       );
+      const results = settled.filter((s) => s.status === "fulfilled").map((s) => s.value);
+      const failed = settled.filter((s) => s.status === "rejected");
+      if (failed.length > 0) {
+        setError(`일부 정책 실행 실패: ${failed.map((f) => f.reason.message).join(", ")}`);
+      }
       setPolicyResults(results);
     } catch (e) {
       setError(e.message);
@@ -56,7 +63,7 @@ export default function Amhs() {
     try {
       const results = await Promise.all(
         SENSITIVITY_VEHICLE_COUNTS.map((n) =>
-          api.amhsSimulate({ nVehicles: n, nFoups, nLaps, policy: "nearest" }),
+          api.amhsSimulate({ nVehicles: n, nFoups, nLaps, stockerCapacity, policy: "nearest" }),
         ),
       );
       setSensitivityResults(results);
@@ -92,6 +99,10 @@ export default function Amhs() {
             바퀴 수
             <input type="number" min="1" max="10" value={nLaps} onChange={(e) => setNLaps(Number(e.target.value))} style={{ width: 56 }} />
           </label>
+          <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
+            스토커 용량
+            <input type="number" min="1" max="20" value={stockerCapacity} onChange={(e) => setStockerCapacity(Number(e.target.value))} style={{ width: 56 }} />
+          </label>
           <button onClick={runPolicyComparison} disabled={running}>
             {running ? "실행 중..." : "디스패칭 정책 비교 실행"}
           </button>
@@ -121,6 +132,22 @@ export default function Amhs() {
               <Bar dataKey="avg_cycle_time_sec" name="평균 반송 시간(초)" fill="var(--series-1)" radius={[4, 4, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
+          <table style={{ marginTop: 12 }}>
+            <thead>
+              <tr><th>정책</th><th>완료율</th><th>P95 반송 시간</th><th>평균 가동률</th><th>최대 큐 길이</th></tr>
+            </thead>
+            <tbody>
+              {policyResults.map((r) => (
+                <tr key={r.policy}>
+                  <td>{r.label}</td>
+                  <td>{(r.completion_rate * 100).toFixed(0)}%</td>
+                  <td>{r.p95_cycle_time_sec.toFixed(0)}초</td>
+                  <td>{(r.avg_vehicle_utilization * 100).toFixed(1)}%</td>
+                  <td>{r.max_queue_length}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 

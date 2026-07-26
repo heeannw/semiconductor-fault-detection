@@ -48,3 +48,11 @@ def requires_models():
     """모델 아티팩트가 필요한 테스트에서 명시적으로 요청하는 스킵 가드."""
     if not _models_ready():
         pytest.skip("모델 아티팩트(models/*.joblib)가 없습니다. notebooks/03_modeling.ipynb를 먼저 실행하세요.")
+
+
+@pytest.fixture
+def requires_delay_model():
+    from amhs.predictive import delay_model_available
+
+    if not delay_model_available():
+        pytest.skip("AMHS 지연 예측 모델이 없습니다. notebooks/08_amhs_delay_prediction.ipynb를 먼저 실행하세요.")

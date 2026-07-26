@@ -113,7 +113,9 @@ class AmhsSimulateRequest(BaseModel):
     n_vehicles: int = 5
     n_foups: int = 20
     n_laps: int = 2
-    policy: str = "nearest"  # "nearest" | "fcfs" | "zone"
+    foup_launch_interval_sec: float = 150.0
+    stocker_capacity: int = 2
+    policy: str = "nearest"  # "nearest" | "fcfs" | "zone" | "predictive"
     seed: int = 42
 
 
@@ -124,6 +126,7 @@ class AmhsSimulateResponse(BaseModel):
     avg_cycle_time_sec: float
     p95_cycle_time_sec: float
     avg_vehicle_utilization: float
+    max_queue_length: int
     completed_transports: int
 
 
