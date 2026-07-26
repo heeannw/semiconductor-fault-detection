@@ -287,3 +287,6 @@ SQLite 스키마: `process_logs`, `fault_records`, `model_metrics`
 - [x] 반송 지연 예측 (`notebooks/08_amhs_delay_prediction.ipynb`) — run-level split, R² 0.933 / 지연 분류 F1 0.947, 실시간 시스템 부하가 정적 거리보다 압도적으로 중요
 - [x] OHT 차량 예지보전 (`amhs/vehicle_health_simulator.py`, `notebooks/09_amhs_predictive_maintenance.ipynb`) — SECOM 파이프라인(IF+XGBoost+SHAP)을 차량 센서 도메인에 재적용
 - [x] 대시보드 AMHS 화면 추가 — `POST /api/amhs/simulate`로 디스패칭 정책 비교/차량 대수 민감도를 실시간 실행, 브라우저에서 동작 확인
+- [x] 예측 기반 디스패칭 + 예지보전 시뮬레이션 피드백 — 노트북 08/09의 모델을 `amhs/predictive.py`·`amhs/maintenance.py`로 실제 시뮬레이션/대시보드에 연결(평가만 하고 끝나지 않게)
+- [x] GitHub Actions CI 추가 (`.github/workflows/tests.yml`) — push/PR마다 backend pytest + frontend Vitest/build 자동 실행, README 배지
+- [x] 프론트엔드 테스트 추가 (Vitest + React Testing Library) — 13개 테스트, 컴포넌트/페이지/API 실패 시 부분 결과 표시 로직까지 커버
