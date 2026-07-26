@@ -8,6 +8,8 @@ from .simulation import (
     zone_based_dispatch,
 )
 from .vehicle_health_simulator import VEHICLE_HEALTH_SPECS, VehicleHealthSimulator
+from .predictive import delay_model_available, make_predictive_dispatch
+from .maintenance import make_maintenance_process, pm_model_available
 
 __all__ = [
     "STATION_ORDER",
@@ -23,4 +25,8 @@ __all__ = [
     "zone_based_dispatch",
     "VehicleHealthSimulator",
     "VEHICLE_HEALTH_SPECS",
+    "make_predictive_dispatch",
+    "delay_model_available",
+    "make_maintenance_process",
+    "pm_model_available",
 ]
