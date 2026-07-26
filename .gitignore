@@ -33,6 +33,8 @@ models/*
 !models/amhs_vehicle_pm_comparison.csv
 !models/amhs_stocker_sensitivity.csv
 !models/amhs_maintenance_comparison.csv
+!models/spc_capability_summary.csv
+!models/spc_detection_result.csv
 
 # One-off legacy conversion venv (see scripts/convert_wm811k.py)
 .venv_legacy/

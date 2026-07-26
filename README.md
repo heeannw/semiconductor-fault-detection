@@ -161,6 +161,14 @@ semiconductor-fault-detection/
 - 국소: 개별 샘플에 대해 어떤 피처가 이상/정상 어느 쪽으로 얼마나 밀었는지(부호 포함) 확인 가능. 백엔드 `POST /api/ai/explain`으로 실시간 제공, `TreeExplainer`가 예측에 사용한 것과 동일한 트리 구조를 그대로 쓰므로 노트북 결과와 API 응답이 정확히 일치한다.
 - 대시보드 이상 탐지 결과 화면에 색상 막대(빨강=이상 쪽 기여, 초록=정상 쪽 기여)로 시각화.
 
+#### Cpk/Ppk & SPC 관리도 (6주차 확장, `notebooks/10_spc_process_capability.ipynb`)
+
+ML 기반 이상 탐지(SECOM)와는 별개로, **fab 품질관리의 가장 기본 도구**인 SPC(관리도, 공정능력지수, Western Electric 룰)를 다룬다. SECOM은 피처가 익명화돼 있어 단위·규격이 없으므로 Cpk 계산이 무의미하다 — 대신 실제 단위/규격이 정의된 공정 시뮬레이터(`simulator/`)에 적용했다. 함수는 재사용을 위해 `simulator/spc.py`로 분리하고 단위 테스트를 붙였다.
+
+- **Cpk 분포**: 21개 파라미터 중 15개 "부적합"(Cpk<1.0), 8개 "양호(관리 필요)", 평균 Cpk 0.991 — 시뮬레이터가 `(high-low)/6`을 표준편차로 써서 데이터를 생성하므로 이론상 그대로 나오는 결과. 시뮬레이터가 "여유 없는 공정"을 의도적으로 흉내 내고 있다는 뜻이다.
+- **Western Electric 룰 탐지** (식각 압력, baseline과 분리된 데이터로 평가): precision 0.684, **recall 1.0**, F1 0.813 — 시뮬레이터 이상치가 규칙상 정상 범위를 확실히 벗어나게 만들어지므로 3시그마 관리도로도 거의 다 잡힌다.
+- SECOM ML(F1 0.228)과 숫자로 직접 비교할 수는 없지만(다른 데이터), **SPC는 설명 가능한 단순 규칙, ML은 다변량 패턴 학습**이라는 관점 차이를 보여준다. 실무에서도 새 공정엔 먼저 SPC를 걸고 데이터가 쌓이면 ML로 고도화하는 순서를 밟는 경우가 많다.
+
 #### 피처 선택 실험 (6주차 확장, `notebooks/04_feature_selection.ipynb`)
 
 상관관계 필터(|corr|>0.95 제거, 440→267개) + XGBoost 중요도 기반 피처 선택으로 F1을 더 끌어올릴 수 있는지 실험했다. K 후보(30/50/100/200/267)마다 03과 동일한 5-fold OOF로 임계값과 OOF F1을 구하고, **OOF 기준 최고(k=30)를 test에 최초 1회만** 적용했다.
@@ -315,4 +323,5 @@ docker compose up --build
 - [x] GitHub Actions CI 추가 (`.github/workflows/tests.yml`) — push/PR마다 backend pytest + frontend Vitest/build 자동 실행, README 배지
 - [x] 프론트엔드 테스트 추가 (Vitest + React Testing Library) — 13개 테스트, 컴포넌트/페이지/API 실패 시 부분 결과 표시 로직까지 커버
 - [x] Docker화 (`backend/Dockerfile`, `frontend/Dockerfile`, `docker-compose.yml`) — `docker compose up --build`로 로컬 실행. 이 환경엔 Docker가 없어 빌드 자체는 못 해봤고, 경로/임포트 구조만 코드로 검증함 — 로컬에서 직접 확인 필요
+- [x] Cpk/Ppk + SPC 관리도 추가 (`simulator/spc.py`, `notebooks/10_spc_process_capability.ipynb`) — I-MR 관리도, Western Electric 룰, 21개 파라미터 공정능력지수, SPC 탐지 F1 0.813
 - [ ] Hugging Face Space 실제 배포 (계정 필요, 진행 전 확인)
