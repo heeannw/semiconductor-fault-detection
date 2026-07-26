@@ -1,5 +1,7 @@
 # 🏭 SemiSense — 반도체 공정 시뮬레이터 & 이상 탐지 AI
 
+[![tests](https://github.com/heeannw/semiconductor-fault-detection/actions/workflows/tests.yml/badge.svg)](https://github.com/heeannw/semiconductor-fault-detection/actions/workflows/tests.yml)
+
 Semiconductor Process Simulator & Fault Detection AI
 
 - **기간:** 6주
