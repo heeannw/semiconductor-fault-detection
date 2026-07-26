@@ -85,7 +85,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Build single-container Space image
-        run: docker build -f Dockerfile.space -t semisense-space .
+        run: DOCKER_BUILDKIT=1 docker build -f Dockerfile.space -t semisense-space .
 
       - name: Run container
         run: docker run -d --name space -p 7860:7860 semisense-space

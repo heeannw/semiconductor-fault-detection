@@ -1,0 +1,29 @@
+# BuildKit uses this instead of the root .dockerignore when building with
+# `-f Dockerfile.space` — the root one excludes frontend/ (only needed by
+# backend/Dockerfile's build), but Dockerfile.space needs to COPY frontend/.
+.venv/
+.venv_legacy/
+.git/
+.github/
+.pytest_cache/
+__pycache__/
+*.pyc
+
+data/raw/
+docs/papers/*.pdf
+
+notebooks/
+docs/
+scripts/
+
+amhs/tests/
+backend/tests/
+simulator/tests/
+
+frontend/node_modules/
+frontend/dist/
+
+*.db
+*.sqlite3
+.env
+.env.local
