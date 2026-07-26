@@ -78,3 +78,37 @@ jobs:
       - name: Tear down
         if: always()
         run: docker compose down
+
+  space-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build single-container Space image
+        run: docker build -f Dockerfile.space -t semisense-space .
+
+      - name: Run container
+        run: docker run -d --name space -p 7860:7860 semisense-space
+
+      - name: Wait for health check
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:7860/api/health; then
+              echo "space container is up"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "space container never became healthy"
+          exit 1
+
+      - name: Check frontend index is served
+        run: curl -sf http://localhost:7860/ | grep -qi "<div id=\"root\">"
+
+      - name: Show logs on failure
+        if: failure()
+        run: docker logs space
+
+      - name: Tear down
+        if: always()
+        run: docker rm -f space

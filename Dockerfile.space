@@ -1,0 +1,33 @@
+# Single-container build for Hugging Face Spaces (Docker SDK), which only runs one
+# container on one port — unlike docker-compose.yml, which runs backend/frontend as
+# two separate containers for local development. This builds the React app and
+# serves it from the same FastAPI process (see the FRONTEND_DIST block at the
+# bottom of backend/app/main.py). Build context must be the project root:
+#   docker build -f Dockerfile.space -t semisense-space .
+
+FROM node:22-slim AS frontend-build
+WORKDIR /frontend
+COPY frontend/package.json frontend/package-lock.json ./
+RUN npm ci
+COPY frontend/ .
+# Baked in at build time so the bundle calls the API on the same origin it's
+# served from, instead of the "http://localhost:8000" used for local dev.
+ENV VITE_API_BASE_URL=""
+RUN npm run build
+
+FROM python:3.11-slim
+WORKDIR /app
+
+COPY backend/requirements.txt backend/requirements.txt
+RUN pip install --no-cache-dir -r backend/requirements.txt
+
+COPY simulator/ simulator/
+COPY amhs/ amhs/
+COPY backend/ backend/
+COPY models/ models/
+COPY data/processed/ data/processed/
+COPY --from=frontend-build /frontend/dist frontend/dist
+
+# Hugging Face Spaces (Docker SDK) default to port 7860.
+EXPOSE 7860
+CMD ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "7860"]

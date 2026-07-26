@@ -5,6 +5,8 @@ from pathlib import Path
 
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
@@ -327,3 +329,22 @@ def amhs_simulate(req: AmhsSimulateRequest):
 @app.get("/api/health", response_model=HealthResponse)
 def health():
     return HealthResponse(status="ok", models_loaded=ml.models_available())
+
+
+# Hugging Face Spaces (Docker SDK) run a single container on a single port, so the
+# built React app is served from the same FastAPI process rather than a separate
+# nginx container. Only active when frontend/dist exists (produced by `npm run
+# build`), so local `uvicorn` dev runs without a frontend build are unaffected —
+# registered last so it never shadows the /api/* routes above.
+FRONTEND_DIST = ROOT_DIR / "frontend" / "dist"
+if FRONTEND_DIST.exists():
+    app.mount("/assets", StaticFiles(directory=FRONTEND_DIST / "assets"), name="frontend-assets")
+
+    @app.get("/{full_path:path}")
+    def serve_frontend(full_path: str):
+        if full_path.startswith("api/"):
+            raise HTTPException(status_code=404, detail="Not found")
+        candidate = FRONTEND_DIST / full_path
+        if full_path and candidate.is_file():
+            return FileResponse(candidate)
+        return FileResponse(FRONTEND_DIST / "index.html")
