@@ -7,7 +7,7 @@
 Semiconductor Process Simulator & Fault Detection AI
 
 - **기간:** 6주
-- **배포:** Hugging Face Space
+- **배포:** Docker (로컬 실행 + CI 빌드 검증) — Hugging Face Space는 Docker SDK 유료 제약으로 보류
 - **데이터:** SECOM (UCI)
 
 ## 📌 프로젝트 개요
@@ -339,4 +339,4 @@ docker compose up --build
 - [x] Hot Lot(긴급 로트) 우선순위 반송 (`amhs/simulation.py`) — 경쟁 없으면 효과 없음(84.0초=83.4초), 경쟁 있으면 hot lot이 31% 빠름(190.5초 vs 276.5초, 15시드 평균) — 우선순위는 자원 경쟁이 있을 때만 의미 있다는 걸 확인
 - [x] AMHS 실제 문헌 근거 보강 (`docs/AMHS.md` §8 참고 문헌) — 실제 논문 6건(Agrawal & Heragu 2006 서베이, Liao & Wang 2005 hot-lot DPD, Wang et al. 2017, Im et al. 헝가리안 알고리즘, 다변수 OHT 스케줄링, 2025 멀티에이전트 RL) 인용, 각각이 구현의 어느 부분과 겹치고 어디서 갈리는지 명시 + 솔직한 한계 서술
 - [x] 수율→비용 정량화 프레임워크 (`notebooks/11_cost_sensitive_threshold.ipynb`) — confusion matrix를 비용 항목으로 매핑, F1-최적/비용-최적 임계값 비교, 재검사 캐파 제약 추가(무제약 최적값이 웨이퍼 90%를 재검사로 보내는 비현실적 정책이었던 문제를 캐파 상한으로 해결), test set에서 정책별 우열이 뒤집힐 수 있다는 한계까지 정직하게 기록
-- [ ] Hugging Face Space 실제 배포 (계정 필요, 진행 전 확인)
+- [x] Hugging Face Space 배포 준비 (`Dockerfile.space`, `backend/app/main.py`의 정적 파일 서빙, CI `space-build` job으로 빌드+헬스체크 검증 완료) — 단, 실제 배포는 보류. 이 계정에서 Docker SDK Space가 유료로 막혀 있어(Static/Gradio만 무료), 비용을 들이지 않는다는 원칙에 따라 실제 배포 대신 로컬 실행(`docker compose up`)과 CI 검증으로 대체

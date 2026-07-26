@@ -313,4 +313,4 @@ docker compose up --build
 - [x] Real literature grounding for AMHS dispatch design (`docs/AMHS.md` §8) — 6 real papers cited, each mapped to what it does/doesn't correspond to in this implementation
 - [x] Yield-to-cost quantification framework (`notebooks/11`) — cost-mapped confusion matrix, F1-optimal vs cost-optimal thresholds, re-inspection capacity constraint, an honest note on where the ranking is unstable at this sample size
 - [x] English documentation (this file, `docs/AMHS.en.md`)
-- [ ] Actual Hugging Face Space deployment (needs an account, not yet done)
+- [x] Hugging Face Space deployment prep (`Dockerfile.space`, static-file serving added to `backend/app/main.py`, verified via a `space-build` CI job that actually builds and health-checks the container) — actual deployment held back, though: this account's Docker SDK Space tier is paid-gated (only Static/Gradio are free), and per this project's zero-cost constraint, local execution (`docker compose up`) plus CI verification stand in for a live deployment instead
