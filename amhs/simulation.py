@@ -4,11 +4,15 @@ FOUP(웨이퍼 로트)이 8개 공정 스테이션을 순서대로 통과하며,
 OHT 차량이 담당한다. 차량 배정(디스패칭) 정책을 바꿔가며 같은 시나리오를
 비교할 수 있도록 정책을 함수로 분리했다.
 
-**스토커(입력 버퍼)와 back-pressure**: 각 스테이션 앞에는 용량이 제한된 스토커가 있다.
-공정을 마친 FOUP은 다음 스테이션의 스토커에 자리가 없으면 그 자리에서 OHT에 실린 채
-대기한다 — 이 동안 OHT도, 방금 공정을 마친 스테이션의 설비도 묶여 있다. 즉 다운스트림이
-막히면 정체가 업스트림으로 번진다(back-pressure). `stocker_capacity=0`에 가깝게 두면
-이 효과가 뚜렷해지고, 크게 두면 완충 효과로 거의 안 보인다.
+**스토커(입력 버퍼)와 back-pressure**: 각 스테이션의 "설비 앞에서 대기 가능한 FOUP 수"를
+`stocker_capacity`로 제한한다. 구현상으로는 별도 버퍼 객체를 두지 않고, 설비를 나타내는
+`simpy.Resource`의 **대기열 길이**를 스토커 점유량으로 그대로 쓴다 — 처음에는 버퍼를
+별도의 `simpy.Store`로 만들어 FOUP이 도착하자마자 그 자리에서 즉시 꺼내가도록 했었는데,
+그러면 버퍼가 사실상 한 번도 안 채워지는(즉시 자기소비) 구조라 back-pressure가 전혀
+관측되지 않았다. 대기열 길이를 직접 버퍼로 쓰면 "설비가 바빠서 대기 중인 FOUP 수"가
+곧 실제 버퍼 점유량과 일치한다. OHT는 목적지 대기열이 이미 `stocker_capacity`만큼 차 있으면
+드롭오프를 미루고 FOUP을 실은 채 기다린다 — 이 동안 OHT도, 방금 공정을 마친 스테이션의
+설비도 묶여 있으므로 다운스트림이 막히면 정체가 업스트림으로 번진다.
 
 단순화를 위해 디스패처는 "유휴 차량이 생겼는지"를 1초 간격으로 폴링한다.
 실제 MCS는 이벤트 기반으로 즉시 반응하지만, 이 정도 규모(차량 수십 대 이하)의
@@ -27,6 +31,7 @@ import simpy
 from .layout import PICKUP_DROPOFF_SEC, STATION_ORDER, STATIONS, next_station, travel_time_seconds
 
 DISPATCH_POLL_INTERVAL_SEC = 1.0
+STOCKER_POLL_INTERVAL_SEC = 1.0
 DEFAULT_STOCKER_CAPACITY = 2
 DEFAULT_CONGESTION_SAMPLE_INTERVAL_SEC = 60.0
 
@@ -89,7 +94,6 @@ def _foup_process(
     env: simpy.Environment,
     foup_id: int,
     station_resources: dict[str, simpy.Resource],
-    input_stockers: dict[str, simpy.Store],
     request_queue: simpy.Store,
     rng: np.random.Generator,
     transport_log: list[dict],
@@ -97,32 +101,26 @@ def _foup_process(
     wip_resource: simpy.Resource,
 ):
     # 순환 레이아웃 + 용량 제한 스토커는 WIP(동시 투입량)가 너무 많으면 서로 물려 교착상태에
-    # 빠질 수 있다(모든 스토커가 꽉 차고 모든 설비가 픽업을 기다리는 상태) — 실제 fab에서
-    # CONWIP(Constant WIP)로 투입량을 제한해 이를 막는 것과 같은 이유로, 여기서도 동시
-    # 진행 중인 FOUP 수를 `wip_resource`로 제한한다.
+    # 빠질 수 있다(모든 대기열이 꽉 차 아무도 못 움직이는 상태) — 실제 fab에서 CONWIP(Constant
+    # WIP)로 투입량을 제한해 이를 막는 것과 같은 이유로, 여기서도 동시 진행 중인 FOUP 수를
+    # `wip_resource`로 제한한다.
     with wip_resource.request() as wip_req:
         yield wip_req
-        yield from _foup_journey(env, foup_id, station_resources, input_stockers, request_queue, rng, transport_log, n_laps)
+        yield from _foup_journey(env, foup_id, station_resources, request_queue, rng, transport_log, n_laps)
 
 
 def _foup_journey(
     env: simpy.Environment,
     foup_id: int,
     station_resources: dict[str, simpy.Resource],
-    input_stockers: dict[str, simpy.Store],
     request_queue: simpy.Store,
     rng: np.random.Generator,
     transport_log: list[dict],
     n_laps: int,
 ):
     station = STATION_ORDER[0]
-    first_entry = True
     total_steps = n_laps * len(STATION_ORDER)
     for step in range(total_steps):
-        if not first_entry:
-            yield input_stockers[station].get()
-        first_entry = False
-
         with station_resources[station].request() as req:
             yield req
             spec = STATIONS[station]
@@ -130,8 +128,7 @@ def _foup_journey(
             yield env.timeout(process_time)
 
             # 전체 여정의 마지막 스테이션(마지막 바퀴의 패키징)이면 fab을 빠져나가는 것이므로
-            # 다음 스테이션으로의 반송을 만들지 않는다 — 그렇지 않으면 아무도 꺼내가지 않는
-            # station 0 스토커에 영원히 자리를 차지하는 유령 반송이 생긴다.
+            # 다음 스테이션으로의 반송을 만들지 않는다.
             if step == total_steps - 1:
                 break
 
@@ -170,7 +167,8 @@ def _dispatcher_process(
     env: simpy.Environment,
     request_queue: simpy.Store,
     vehicles: list[Vehicle],
-    input_stockers: dict[str, simpy.Store],
+    station_resources: dict[str, simpy.Resource],
+    stocker_capacity: int,
     dispatch_policy: DispatchPolicy,
 ):
     while True:
@@ -184,14 +182,15 @@ def _dispatcher_process(
         chosen = dispatch_policy(request, idle, vehicles)
         chosen.busy = True
         request.assigned_vehicle_id = chosen.id
-        env.process(_execute_transport(env, chosen, request, input_stockers))
+        env.process(_execute_transport(env, chosen, request, station_resources, stocker_capacity))
 
 
 def _execute_transport(
     env: simpy.Environment,
     vehicle: Vehicle,
     request: TransportRequest,
-    input_stockers: dict[str, simpy.Store],
+    station_resources: dict[str, simpy.Resource],
+    stocker_capacity: int,
 ):
     start = env.now
 
@@ -202,8 +201,12 @@ def _execute_transport(
     travel_to_dropoff = travel_time_seconds(request.from_station, request.to_station)
     yield env.timeout(travel_to_dropoff)
 
-    # 목적지 스토커에 자리가 없으면 여기서 대기한다 — 차량이 묶여 있는 채로 back-pressure가 걸린다.
-    yield input_stockers[request.to_station].put(request.foup_id)
+    # 목적지 설비의 대기열(=스토커 점유량)이 이미 꽉 찼으면 여기서 대기한다 — 차량이 FOUP을
+    # 실은 채 묶여 있는 상태이므로 back-pressure가 실제로 걸린다.
+    destination_resource = station_resources[request.to_station]
+    while len(destination_resource.queue) >= stocker_capacity:
+        yield env.timeout(STOCKER_POLL_INTERVAL_SEC)
+
     yield env.timeout(PICKUP_DROPOFF_SEC)
 
     vehicle.position = request.to_station
@@ -215,7 +218,7 @@ def _execute_transport(
 
 def _congestion_sampler(
     env: simpy.Environment,
-    input_stockers: dict[str, simpy.Store],
+    station_resources: dict[str, simpy.Resource],
     vehicles: list[Vehicle],
     congestion_log: list[dict],
     interval_sec: float,
@@ -223,12 +226,11 @@ def _congestion_sampler(
     while True:
         busy_vehicles = sum(1 for v in vehicles if v.busy)
         under_maintenance = sum(1 for v in vehicles if v.under_maintenance)
-        for station, stocker in input_stockers.items():
+        for station, resource in station_resources.items():
             congestion_log.append({
                 "time": env.now,
                 "station": station,
-                "queue_length": len(stocker.items),
-                "stocker_capacity": stocker.capacity,
+                "queue_length": len(resource.queue),
                 "busy_vehicles": busy_vehicles,
                 "under_maintenance_vehicles": under_maintenance,
             })
@@ -251,7 +253,7 @@ def run_simulation(
 
     `max_wip`: 동시에 시스템 안에 있을 수 있는 FOUP 수 상한(CONWIP). `None`이면
     `len(STATION_ORDER) * stocker_capacity`(전체 스토커 용량)로 자동 설정 — 순환 레이아웃에서
-    스토커가 다 차서 교착상태에 빠지는 것을 막는 안전장치다.
+    모든 대기열이 꽉 차 교착상태에 빠지는 것을 막는 안전장치다.
     `maintenance_process`: `(env, vehicles, rng) -> Generator`를 넘기면 추가 SimPy 프로세스로
     등록된다 — 예지보전 피드백(주기적으로 차량 상태를 점검해 이상 시 운행 중단)을 여기에 꽂는다.
     """
@@ -263,7 +265,6 @@ def run_simulation(
 
     env = simpy.Environment()
     station_resources = {name: simpy.Resource(env, capacity=1) for name in STATION_ORDER}
-    input_stockers = {name: simpy.Store(env, capacity=stocker_capacity) for name in STATION_ORDER}
     request_queue = simpy.Store(env)
     wip_resource = simpy.Resource(env, capacity=max_wip)
 
@@ -277,12 +278,12 @@ def run_simulation(
 
     def launch_foups():
         for foup_id in range(n_foups):
-            env.process(_foup_process(env, foup_id, station_resources, input_stockers, request_queue, rng, transport_log, n_laps, wip_resource))
+            env.process(_foup_process(env, foup_id, station_resources, request_queue, rng, transport_log, n_laps, wip_resource))
             yield env.timeout(rng.exponential(foup_launch_interval_sec))
 
     env.process(launch_foups())
-    env.process(_dispatcher_process(env, request_queue, vehicles, input_stockers, dispatch_policy))
-    env.process(_congestion_sampler(env, input_stockers, vehicles, congestion_log, congestion_sample_interval_sec))
+    env.process(_dispatcher_process(env, request_queue, vehicles, station_resources, stocker_capacity, dispatch_policy))
+    env.process(_congestion_sampler(env, station_resources, vehicles, congestion_log, congestion_sample_interval_sec))
     if maintenance_process is not None:
         env.process(maintenance_process(env, vehicles, rng))
 
