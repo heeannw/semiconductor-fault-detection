@@ -30,7 +30,7 @@ def test_out_of_spec_high_produces_diagnosis_with_correct_direction():
     assert d.direction == "high"
     assert d.value == 150
     assert d.spec_low == 5 and d.spec_high == 100
-    assert d.label and d.cause and d.action
+    assert d.label and d.cause and d.impact and d.action
 
 
 def test_out_of_spec_low_produces_diagnosis_with_correct_direction():

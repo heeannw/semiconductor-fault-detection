@@ -17,6 +17,7 @@ class DiagnosisOut(BaseModel):
     direction: str  # "high" | "low"
     label: str
     cause: str
+    impact: str
     action: str
 
 

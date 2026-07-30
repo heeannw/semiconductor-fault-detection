@@ -52,7 +52,7 @@ def test_simulate_anomaly_includes_root_cause_diagnosis(client):
     assert len(log["diagnoses"]) > 0
     d = log["diagnoses"][0]
     assert d["direction"] in ("high", "low")
-    assert d["label"] and d["cause"] and d["action"]
+    assert d["label"] and d["cause"] and d["impact"] and d["action"]
 
 
 def test_simulate_normal_has_no_diagnosis(client):

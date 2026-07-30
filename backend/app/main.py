@@ -77,7 +77,8 @@ def _process_log_to_out(log: ProcessLog) -> ProcessLogOut:
     diagnoses = [
         DiagnosisOut(
             parameter=d.parameter, value=d.value, spec_low=d.spec_low, spec_high=d.spec_high,
-            unit=d.unit, direction=d.direction, label=d.label, cause=d.cause, action=d.action,
+            unit=d.unit, direction=d.direction, label=d.label, cause=d.cause,
+            impact=d.impact, action=d.action,
         )
         for d in diagnose(log.process, params)
     ]

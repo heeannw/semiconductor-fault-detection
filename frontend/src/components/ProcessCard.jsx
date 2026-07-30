@@ -43,6 +43,7 @@ export default function ProcessCard({ log }) {
                 {d.label} ({d.direction === "high" ? "↑ 상한 초과" : "↓ 하한 미달"}: {d.value} {d.unit}, 규격 {d.spec_low}~{d.spec_high}{d.unit})
               </div>
               <div className="diagnosis-row"><span>원인 후보</span>{d.cause}</div>
+              <div className="diagnosis-row"><span>영향</span>{d.impact}</div>
               <div className="diagnosis-row"><span>조치 제안</span>{d.action}</div>
             </div>
           ))}
