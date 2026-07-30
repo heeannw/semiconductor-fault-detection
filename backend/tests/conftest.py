@@ -56,3 +56,11 @@ def requires_delay_model():
 
     if not delay_model_available():
         pytest.skip("AMHS 지연 예측 모델이 없습니다. notebooks/08_amhs_delay_prediction.ipynb를 먼저 실행하세요.")
+
+
+@pytest.fixture
+def requires_fault_classifier():
+    from simulator.fault_classifier import fault_classifier_available
+
+    if not fault_classifier_available("etching"):
+        pytest.skip("공정 원인 분류 모델이 없습니다. notebooks/12_fault_scenario_classification.ipynb를 먼저 실행하세요.")

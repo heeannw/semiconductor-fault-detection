@@ -39,6 +39,7 @@ models/*
 !models/cost_sensitive_threshold_results.csv
 !models/cost_capacity_tradeoff.csv
 !models/cost_threshold_sweep.csv
+!models/fault_classifier_summary.csv
 
 # One-off legacy conversion venv (see scripts/convert_wm811k.py)
 .venv_legacy/

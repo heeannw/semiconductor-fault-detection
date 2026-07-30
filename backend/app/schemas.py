@@ -21,6 +21,13 @@ class DiagnosisOut(BaseModel):
     action: str
 
 
+class FaultPredictionOut(BaseModel):
+    predicted_label: str
+    predicted_label_ko: str
+    confidence: float
+    probabilities: dict[str, float]
+
+
 class ProcessLogOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -31,6 +38,20 @@ class ProcessLogOut(BaseModel):
     is_anomaly: bool
     created_at: datetime
     diagnoses: list[DiagnosisOut] = []
+    predicted_fault: FaultPredictionOut | None = None
+
+
+class FaultDemoRequest(BaseModel):
+    process: str
+
+
+class FaultDemoResponse(BaseModel):
+    process: str
+    process_name_ko: str
+    params: dict[str, float]
+    injected_label: str  # 실제로 주입한 정답 ("normal" 또는 시나리오 영문 식별자)
+    injected_label_ko: str
+    predicted_fault: FaultPredictionOut
 
 
 class SecomDetectRequest(BaseModel):

@@ -298,6 +298,101 @@ a {
   color: var(--text-muted);
 }
 
+.fault-prediction-block {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border);
+  font-size: 12px;
+}
+
+.fault-prediction-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.fault-confidence {
+  font-weight: 600;
+  color: var(--series-1);
+}
+
+.fault-prediction-label {
+  font-weight: 600;
+  color: var(--series-1);
+  margin-bottom: 6px;
+}
+
+.fault-prediction-label.is-normal {
+  color: var(--status-good);
+}
+
+.fault-prob-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 1px 0;
+}
+
+.fault-prob-label {
+  flex: 0 0 40%;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fault-prob-bar-track {
+  flex: 1;
+  height: 6px;
+  background: var(--gridline);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.fault-prob-bar-fill {
+  height: 100%;
+  background: var(--series-1);
+  border-radius: 999px;
+}
+
+.fault-prob-value {
+  flex: 0 0 32px;
+  text-align: right;
+  color: var(--text-muted);
+}
+
+.fault-demo-result {
+  margin-top: 4px;
+}
+
+.fault-demo-compare {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.fault-demo-label-title {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+
+.fault-demo-label-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.fault-demo-params {
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
 .toolbar {
   display: flex;
   gap: 8px;

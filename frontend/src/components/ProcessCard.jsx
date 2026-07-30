@@ -49,6 +49,28 @@ export default function ProcessCard({ log }) {
           ))}
         </div>
       )}
+      {log.predicted_fault && (
+        <div className="fault-prediction-block">
+          <div className="fault-prediction-header">
+            AI 예측 원인 (다중 파라미터 패턴 기반)
+            <span className="fault-confidence">확신도 {(log.predicted_fault.confidence * 100).toFixed(0)}%</span>
+          </div>
+          <div className={`fault-prediction-label${log.predicted_fault.predicted_label === "normal" ? " is-normal" : ""}`}>
+            {log.predicted_fault.predicted_label_ko}
+          </div>
+          {Object.entries(log.predicted_fault.probabilities)
+            .sort(([, a], [, b]) => b - a)
+            .map(([label, prob]) => (
+              <div className="fault-prob-row" key={label}>
+                <span className="fault-prob-label">{label}</span>
+                <div className="fault-prob-bar-track">
+                  <div className="fault-prob-bar-fill" style={{ width: `${prob * 100}%` }} />
+                </div>
+                <span className="fault-prob-value">{(prob * 100).toFixed(0)}%</span>
+              </div>
+            ))}
+        </div>
+      )}
     </div>
   );
 }

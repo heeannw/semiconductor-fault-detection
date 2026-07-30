@@ -56,4 +56,40 @@ describe("ProcessCard", () => {
     expect(screen.getByText("식각 이방성 저하, CD 산포 증가")).toBeInTheDocument();
     expect(screen.getByText("펌프 점검, MFC 캘리브레이션")).toBeInTheDocument();
   });
+
+  it("shows no AI fault-prediction block when predicted_fault is absent", () => {
+    const { container } = render(<ProcessCard log={NORMAL_LOG} />);
+    expect(container.querySelector(".fault-prediction-block")).not.toBeInTheDocument();
+  });
+
+  it("shows the AI-predicted fault label, confidence, and probability bars", () => {
+    const logWithPrediction = {
+      ...ANOMALY_LOG,
+      predicted_fault: {
+        predicted_label: "mfc_drift",
+        predicted_label_ko: "MFC 캘리브레이션 드리프트",
+        confidence: 0.87,
+        probabilities: { "정상": 0.05, "MFC 캘리브레이션 드리프트": 0.87, "RF 제너레이터 이상": 0.08 },
+      },
+    };
+    render(<ProcessCard log={logWithPrediction} />);
+    expect(screen.getByText("AI 예측 원인 (다중 파라미터 패턴 기반)")).toBeInTheDocument();
+    expect(screen.getByText("확신도 87%")).toBeInTheDocument();
+    expect(screen.getAllByText("MFC 캘리브레이션 드리프트").length).toBeGreaterThan(0);
+    expect(screen.getByText("RF 제너레이터 이상")).toBeInTheDocument();
+  });
+
+  it("styles a normal AI prediction differently from a fault prediction", () => {
+    const logWithNormalPrediction = {
+      ...NORMAL_LOG,
+      predicted_fault: {
+        predicted_label: "normal",
+        predicted_label_ko: "정상",
+        confidence: 0.95,
+        probabilities: { "정상": 0.95, "MFC 캘리브레이션 드리프트": 0.03, "RF 제너레이터 이상": 0.02 },
+      },
+    };
+    const { container } = render(<ProcessCard log={logWithNormalPrediction} />);
+    expect(container.querySelector(".fault-prediction-label.is-normal")).toBeTruthy();
+  });
 });

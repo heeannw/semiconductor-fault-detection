@@ -189,6 +189,14 @@ ML 기반 이상 탐지(SECOM)와는 별개로, **fab 품질관리의 가장 기
 - `simulator/tests/test_diagnosis.py`에 "24개 파라미터 × 2방향 전체가 매핑됐는지" 검증하는 완결성 테스트를 포함 — 템플릿 하나라도 빠지면 "이상"이라고만 뜨고 원인/조치 없는 사각지대가 생기는 걸 방지한다.
 - `POST /api/process/simulate`/`/api/process/status`/`/api/process/history` 응답의 `diagnoses` 필드로 노출되고, 프론트엔드 `ProcessCard`에서 이상 발생 시 파라미터별로 "핵심 에러 문구 / 원인 후보 / 영향 / 조치 제안"을 바로 보여준다.
 
+#### AI 원인 분류 모델 (규칙이 아니라 데이터에서 학습, `notebooks/12_fault_scenario_classification.ipynb`)
+
+위 규칙 기반 진단은 파라미터를 하나씩 독립적으로 검사할 뿐, "압력도 이상하고 가스 유량도 이상한데 사실 같은 원인 때문"이라는 연결은 모른다. 이 노트북은 `simulator/fault_scenarios.py`가 "숨은 원인(예: MFC 캘리브레이션 드리프트) → 여러 파라미터가 상관되게 움직이는 패턴"을 레이블과 함께 합성 생성하고, XGBoost가 그 패턴만 보고 원인을 맞히도록 공정별로 학습한다 — 하드코딩된 조건문이 아니라 데이터로부터 학습된 판단이라는 게 핵심이다.
+
+- **8개 공정 전부 81~87% 정확도** (3-클래스: 정상 + 시나리오 2개). SECOM(F1 0.235)과 직접 비교할 수 없는 이유는 지금까지와 같다 — 여긴 규칙으로 생성한 합성 데이터, SECOM은 실측 노이즈 데이터.
+- **정직하게 발견한 사실**: 이 모델을 대시보드의 기본 "데이터 생성" 버튼(파라미터를 독립적으로 무작위 이탈시키는 방식)에 그대로 연결했더니, 학습된 상관 패턴과 안 맞아서 값이 명백히 규격을 벗어나도 대부분 "정상"으로 오판했다. 규칙 기반 진단과 AI 분류기가 **서로 다른 질문**에 답하기 때문이다 — 규칙은 "이 파라미터 하나가 규격을 벗어났나", AI는 "이 다중 파라미터 패턴이 내가 학습한 고장 신호와 닮았나". 그래서 실제로 학습된 상관 패턴을 주입해 AI가 무엇을 잘 잡아내는지 직접 보여주는 별도 데모(`POST /api/process/fault-demo`, 대시보드 "AI 원인 분류 데모" 카드)를 추가했다 — 30개 표본으로 처음 검증했다가 60%가 나와 당황했는데, 200개로 다시 재보니 83.5%로 정상이었다(작은 표본의 우연이었다는 걸 확인하고 테스트도 n=150/임계값 0.65로 고쳤다).
+- `POST /api/process/simulate` 등에도 `predicted_fault` 필드로 연결해, 규칙 기반 진단과 AI 예측을 나란히 보여준다(대시보드 `ProcessCard`).
+
 #### 피처 선택 실험 (6주차 확장, `notebooks/04_feature_selection.ipynb`)
 
 상관관계 필터(|corr|>0.95 제거, 440→267개) + XGBoost 중요도 기반 피처 선택으로 F1을 더 끌어올릴 수 있는지 실험했다. K 후보(30/50/100/200/267)마다 03과 동일한 5-fold OOF로 임계값과 OOF F1을 구하고, **OOF 기준 최고(k=30)를 test에 최초 1회만** 적용했다.
@@ -351,3 +359,4 @@ docker compose up --build
 - [x] 수율→비용 정량화 프레임워크 (`notebooks/11_cost_sensitive_threshold.ipynb`) — confusion matrix를 비용 항목으로 매핑, F1-최적/비용-최적 임계값 비교, 재검사 캐파 제약 추가(무제약 최적값이 웨이퍼 90%를 재검사로 보내는 비현실적 정책이었던 문제를 캐파 상한으로 해결), test set에서 정책별 우열이 뒤집힐 수 있다는 한계까지 정직하게 기록
 - [x] Hugging Face Space 배포 준비 (`Dockerfile.space`, `backend/app/main.py`의 정적 파일 서빙, CI `space-build` job으로 빌드+헬스체크 검증 완료) — 단, 실제 배포는 보류. 이 계정에서 Docker SDK Space가 유료로 막혀 있어(Static/Gradio만 무료), 비용을 들이지 않는다는 원칙에 따라 실제 배포 대신 로컬 실행(`docker compose up`)과 CI 검증으로 대체
 - [x] 핵심 에러 문구 + 원인/영향/조치 제안 (`simulator/diagnosis.py`) — 공정 파라미터가 규격을 벗어나면 반도체 공정 도메인 지식 기반의 원인 후보/영향/조치를 정적 규칙(LLM 미사용, 비용 없음)으로 즉시 제안. 8개 공정 24개 파라미터 × 2방향 전체 매핑을 테스트로 검증, `POST /api/process/simulate` 등의 `diagnoses` 필드로 노출, 대시보드에 표시
+- [x] AI 원인 분류 모델 (`simulator/fault_scenarios.py`, `notebooks/12_fault_scenario_classification.ipynb`) — 규칙이 아니라 다중 파라미터 상관 패턴에서 XGBoost가 원인을 추론(8개 공정 81~87% 정확도). 기본 데모 데이터(독립 무작위 이탈)와는 패턴이 안 맞아 대부분 "정상"으로 오판한다는 걸 발견해 `POST /api/process/fault-demo`(실제 학습 패턴 주입 데모, 200표본 재검증 83.5%)를 추가로 연결

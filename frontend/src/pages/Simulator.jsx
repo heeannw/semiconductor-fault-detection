@@ -22,6 +22,10 @@ export default function Simulator() {
   const [error, setError] = useState(null);
   const [latest, setLatest] = useState([]);
 
+  const [faultDemoProcess, setFaultDemoProcess] = useState("etching");
+  const [faultDemoRunning, setFaultDemoRunning] = useState(false);
+  const [faultDemoResult, setFaultDemoResult] = useState(null);
+
   const historyProcess = process === "all" ? undefined : process;
   const { data: history, reload: reloadHistory } = useAsync(
     () => api.processHistory(historyProcess, 20),
@@ -39,6 +43,19 @@ export default function Simulator() {
       setError(e.message);
     } finally {
       setRunning(false);
+    }
+  };
+
+  const runFaultDemo = async () => {
+    setFaultDemoRunning(true);
+    setError(null);
+    try {
+      const result = await api.faultDemo(faultDemoProcess);
+      setFaultDemoResult(result);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setFaultDemoRunning(false);
     }
   };
 
@@ -84,6 +101,57 @@ export default function Simulator() {
           </div>
         </div>
       )}
+
+      <div className="card">
+        <p className="card-title">AI 원인 분류 데모 (다중 파라미터 상관 패턴)</p>
+        <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: -4, marginBottom: 12 }}>
+          위 "데이터 생성"은 파라미터를 하나씩 독립적으로 무작위 이탈시켜서, AI 분류 모델이 학습한 상관 패턴과 맞지 않아 대부분 "정상"으로 예측됩니다.
+          이 데모는 모델을 실제로 학습시킨 상관 패턴(예: MFC 드리프트 → 압력·가스 유량이 함께 상승)을 주입해, AI가 정말로 원인을 맞히는지 확인합니다.
+        </p>
+        <div className="toolbar">
+          <select value={faultDemoProcess} onChange={(e) => setFaultDemoProcess(e.target.value)}>
+            {PROCESSES.filter((p) => p.key !== "all").map((p) => (
+              <option key={p.key} value={p.key}>{p.label}</option>
+            ))}
+          </select>
+          <button onClick={runFaultDemo} disabled={faultDemoRunning}>
+            {faultDemoRunning ? "실행 중..." : "AI 원인 분류 데모 실행"}
+          </button>
+        </div>
+        {faultDemoResult && (
+          <div className="fault-demo-result">
+            <div className="fault-demo-compare">
+              <div>
+                <div className="fault-demo-label-title">실제 주입한 원인</div>
+                <div className="fault-demo-label-value">{faultDemoResult.injected_label_ko}</div>
+              </div>
+              <div>
+                <div className="fault-demo-label-title">AI 예측 원인</div>
+                <div className="fault-demo-label-value">
+                  {faultDemoResult.predicted_fault.predicted_label_ko} ({(faultDemoResult.predicted_fault.confidence * 100).toFixed(0)}%)
+                </div>
+              </div>
+              <span className={`badge ${faultDemoResult.injected_label === faultDemoResult.predicted_fault.predicted_label ? "badge-good" : "badge-critical"}`}>
+                {faultDemoResult.injected_label === faultDemoResult.predicted_fault.predicted_label ? "일치" : "불일치"}
+              </span>
+            </div>
+            {Object.entries(faultDemoResult.predicted_fault.probabilities)
+              .sort(([, a], [, b]) => b - a)
+              .map(([label, prob]) => (
+                <div className="fault-prob-row" key={label}>
+                  <span className="fault-prob-label">{label}</span>
+                  <div className="fault-prob-bar-track">
+                    <div className="fault-prob-bar-fill" style={{ width: `${prob * 100}%` }} />
+                  </div>
+                  <span className="fault-prob-value">{(prob * 100).toFixed(0)}%</span>
+                </div>
+              ))}
+            <div className="fault-demo-params">
+              {Object.entries(faultDemoResult.params).map(([k, v]) => `${k}=${v.toFixed(2)}`).join(", ")}
+            </div>
+          </div>
+        )}
+      </div>
 
       <div className="card">
         <p className="card-title">최근 이력 {historyProcess ? `(${historyProcess})` : "(전체)"}</p>

@@ -1,8 +1,10 @@
 import json
+import random
 import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
 
+import numpy as np
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -14,7 +16,17 @@ ROOT_DIR = Path(__file__).resolve().parents[2]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-from simulator import PROCESS_SPECS, ProcessSimulator, diagnose  # noqa: E402
+from simulator import (  # noqa: E402
+    FAULT_SCENARIOS,
+    PROCESS_NAMES_KO,
+    PROCESS_SPECS,
+    ProcessSimulator,
+    diagnose,
+    fault_classifier_available,
+    generate_fault_sample,
+    predict_fault,
+    scenario_label_ko,
+)
 
 import amhs  # noqa: E402
 
@@ -32,6 +44,9 @@ from .schemas import (  # noqa: E402
     DetectResponse,
     DiagnosisOut,
     ExplainResponse,
+    FaultDemoRequest,
+    FaultDemoResponse,
+    FaultPredictionOut,
     FaultRecordOut,
     FeatureImportanceOut,
     HealthResponse,
@@ -82,12 +97,24 @@ def _process_log_to_out(log: ProcessLog) -> ProcessLogOut:
         )
         for d in diagnose(log.process, params)
     ]
+    fault_prediction = predict_fault(log.process, params)
+    predicted_fault = (
+        FaultPredictionOut(
+            predicted_label=fault_prediction.predicted_label,
+            predicted_label_ko=fault_prediction.predicted_label_ko,
+            confidence=fault_prediction.confidence,
+            probabilities=fault_prediction.probabilities,
+        )
+        if fault_prediction is not None
+        else None
+    )
     return ProcessLogOut(
         id=log.id,
         process=log.process,
         process_name_ko=log.process_name_ko,
         params=params,
         diagnoses=diagnoses,
+        predicted_fault=predicted_fault,
         is_anomaly=log.is_anomaly,
         created_at=log.created_at,
     )
@@ -118,6 +145,45 @@ def simulate_process(req: SimulateRequest, db: Session = Depends(get_db)):
     for log in logs:
         db.refresh(log)
     return [_process_log_to_out(log) for log in logs]
+
+
+@app.post("/api/process/fault-demo", response_model=FaultDemoResponse)
+def process_fault_demo(req: FaultDemoRequest):
+    """`POST /api/process/simulate`가 파라미터를 하나씩 독립적으로 무작위 이탈시키는 것과
+    달리, 이 엔드포인트는 `simulator/fault_scenarios.py`가 정의한 **상관된 다중 파라미터
+    패턴**(실제로 AI 원인 분류 모델을 학습시킨 바로 그 패턴)을 주입해, "AI 예측 원인" 기능이
+    실제로 무엇을 잘 잡아내는지 보여준다. 독립 무작위 이탈은 학습된 어떤 패턴과도 안 맞아
+    분류기가 대부분 '정상'으로 오판하므로(README에 정직하게 기록) 이 엔드포인트가 필요하다."""
+    if req.process not in PROCESS_SPECS:
+        raise HTTPException(status_code=400, detail=f"Unknown process: {req.process}. Valid: {list(PROCESS_SPECS)}")
+    if not fault_classifier_available(req.process):
+        raise HTTPException(
+            status_code=503,
+            detail="공정 원인 분류 모델이 없습니다. notebooks/12_fault_scenario_classification.ipynb를 먼저 실행하세요.",
+        )
+
+    rng = np.random.default_rng()
+    scenarios = FAULT_SCENARIOS.get(req.process, [])
+    scenario = random.choice([None, *scenarios])
+
+    params = generate_fault_sample(req.process, scenario, rng)
+    injected_label = scenario.name if scenario else "normal"
+
+    prediction = predict_fault(req.process, params)
+
+    return FaultDemoResponse(
+        process=req.process,
+        process_name_ko=PROCESS_NAMES_KO[req.process],
+        params=params,
+        injected_label=injected_label,
+        injected_label_ko=scenario_label_ko(req.process, injected_label),
+        predicted_fault=FaultPredictionOut(
+            predicted_label=prediction.predicted_label,
+            predicted_label_ko=prediction.predicted_label_ko,
+            confidence=prediction.confidence,
+            probabilities=prediction.probabilities,
+        ),
+    )
 
 
 @app.post("/api/ai/detect", response_model=DetectResponse)

@@ -1,0 +1,9 @@
+process,n_classes,accuracy,f1_macro
+wafer_fabrication,3,0.8567,0.8553
+oxidation,3,0.8667,0.8649
+photolithography,3,0.86,0.8569
+etching,3,0.8133,0.8142
+deposition,3,0.8667,0.8649
+metallization,3,0.83,0.8301
+eds,3,0.83,0.8224
+packaging,3,0.8233,0.8234
