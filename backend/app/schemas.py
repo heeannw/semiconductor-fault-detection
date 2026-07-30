@@ -137,3 +137,22 @@ class AmhsStationOut(BaseModel):
     name: str
     name_ko: str
     index: int
+
+
+class AmhsTransportEvent(BaseModel):
+    foup_id: int
+    from_station: str
+    to_station: str
+    requested_at: float
+    completed_at: float
+    vehicle_id: int
+    is_hot_lot: bool
+
+
+class AmhsReplayResponse(BaseModel):
+    policy: str
+    n_vehicles: int
+    n_stations: int
+    sim_duration_sec: float
+    stations: list[AmhsStationOut]
+    events: list[AmhsTransportEvent]

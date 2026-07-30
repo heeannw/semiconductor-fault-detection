@@ -257,6 +257,7 @@ Key design notes:
 - `src/api/client.js` is the single point of contact with the backend (`http://localhost:8000`). CORS is configured on the backend to allow both the Vite dev port (5173) and the CRA-era port (3000).
 - The anomaly-detection screen ships with 3 fixed real SECOM samples (normal / correctly-caught defect / missed defect) baked into `src/data/secomSamples.js`, since a human can't meaningfully hand-enter a 440-dimensional feature vector for a live demo.
 - The AMHS screen calls `POST /api/amhs/simulate` live for policy comparison and vehicle-count sensitivity (feasible because the simulation runs in under a second). Delay prediction (notebook 08) and predictive maintenance (notebook 09) are shown as static reference tables instead — retraining XGBoost/Isolation Forest live on every click would be too slow for a dashboard interaction.
+- The same screen also has a 2D canvas animation (`AmhsAnimation.jsx`) that replays the individual transport events from `POST /api/amhs/simulate/replay` — the 8 stations are laid out as a circular track and OHT vehicles move along their actual recorded paths. The canvas's displayed size isn't settled yet right at mount, so a `ResizeObserver` re-measures it and rescales the internal resolution once the surrounding layout actually stabilizes.
 - Run locally: `cd frontend && npm install && npm run dev` (requires the backend running on port 8000).
 - All 5 screens manually tested end-to-end in the browser.
 
@@ -304,6 +305,7 @@ docker compose up --build
 - [x] Transport-delay prediction (`notebooks/08`) — run-level split, R² 0.933 / delay-classification F1 0.947, real-time system load dominates static distance as a predictor
 - [x] OHT vehicle predictive maintenance (`amhs/vehicle_health_simulator.py`, `notebooks/09`) — SECOM's IF+XGBoost+SHAP pipeline reapplied to vehicle sensor data
 - [x] AMHS dashboard screen — live dispatch-policy comparison and vehicle-count sensitivity
+- [x] AMHS 2D transport animation (`POST /api/amhs/simulate/replay`, `frontend/src/components/AmhsAnimation.jsx`) — canvas replay of OHT vehicles actually moving around the 8-station circular track (play/pause, speed, scrub), hot-lot vehicles color-coded
 - [x] Predictive dispatching + predictive-maintenance feedback wired into the live simulation/dashboard (not left as notebook-only evaluation)
 - [x] GitHub Actions CI — backend pytest + frontend Vitest/build + Docker build/health-check on every push/PR
 - [x] Frontend tests (Vitest + React Testing Library) — 13 tests, including partial-failure UI states

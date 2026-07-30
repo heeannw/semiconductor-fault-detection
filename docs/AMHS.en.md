@@ -43,6 +43,7 @@ with — and falls short of — actual published research and industry practice.
 | Transport delay / congestion prediction | `notebooks/08_amhs_delay_prediction.ipynb` — XGBoost regression/classification on simulation logs, wired into live dispatching via `amhs/predictive.py` |
 | Vehicle predictive maintenance | `amhs/vehicle_health_simulator.py` + `notebooks/09_amhs_predictive_maintenance.ipynb` — the same Isolation Forest + XGBoost ensemble pipeline used on SECOM, reapplied to OHT vehicle sensors (motor current, vibration, temperature), fed back into the simulation via `amhs/maintenance.py` |
 | Dashboard integration | `POST /api/amhs/simulate` in `backend/app/main.py` runs the SimPy simulation on demand (< 1s) — the React "AMHS" screen runs dispatch-policy comparison and vehicle-count sensitivity live on button click |
+| 2D transport animation | `POST /api/amhs/simulate/replay` returns the full per-FOUP transport event log (origin/destination station, timing, vehicle, hot-lot flag) — `frontend/src/components/AmhsAnimation.jsx` draws the 8 stations as a circular track and replays OHT vehicles moving along it in real time on a canvas (play/pause, speed, scrub) |
 
 If the SECOM/process-simulator part of this repo covers **FDC (Fault Detection and Classification)** —
 "is this wafer defective?" — the AMHS part covers **whether that wafer arrives at the next tool on

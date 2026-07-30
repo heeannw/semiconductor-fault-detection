@@ -7,8 +7,18 @@ import { api } from "../api/client.js";
 vi.mock("../api/client.js", () => ({
   api: {
     amhsSimulate: vi.fn(),
+    amhsSimulateReplay: vi.fn(),
   },
 }));
+
+const FAKE_REPLAY = {
+  policy: "nearest", n_vehicles: 3, n_stations: 8, sim_duration_sec: 500,
+  stations: Array.from({ length: 8 }, (_, i) => ({ name: `p${i}`, name_ko: `공정${i}`, index: i })),
+  events: [
+    { foup_id: 0, from_station: "p0", to_station: "p1", requested_at: 0, completed_at: 40, vehicle_id: 0, is_hot_lot: false },
+    { foup_id: 0, from_station: "p1", to_station: "p2", requested_at: 40, completed_at: 80, vehicle_id: 1, is_hot_lot: true },
+  ],
+};
 
 const FAKE_RESULT = {
   policy: "nearest", n_vehicles: 5, completion_rate: 1.0,
@@ -61,6 +71,19 @@ describe("Amhs page", () => {
       expect(screen.getByText("Hot Lot 평균")).toBeInTheDocument();
       expect(screen.getAllByText("190초").length).toBeGreaterThan(0);
     });
+  });
+
+  it("runs the OHT replay animation on button click and renders the canvas", async () => {
+    api.amhsSimulateReplay.mockResolvedValue(FAKE_REPLAY);
+    const user = userEvent.setup();
+    render(<Amhs />);
+
+    await user.click(screen.getByRole("button", { name: "애니메이션 실행" }));
+
+    await waitFor(() => {
+      expect(api.amhsSimulateReplay).toHaveBeenCalledTimes(1);
+    });
+    expect(screen.getByRole("img", { name: "OHT 반송 애니메이션" })).toBeInTheDocument();
   });
 
   it("shows a partial result and an error banner when one policy call fails", async () => {

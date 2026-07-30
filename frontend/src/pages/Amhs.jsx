@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { api } from "../api/client.js";
+import AmhsAnimation from "../components/AmhsAnimation.jsx";
 
 const POLICIES = [
   { key: "nearest", label: "최근접 차량" },
@@ -35,6 +36,10 @@ export default function Amhs() {
 
   const [sensitivityRunning, setSensitivityRunning] = useState(false);
   const [sensitivityResults, setSensitivityResults] = useState(null);
+
+  const [replayPolicy, setReplayPolicy] = useState("nearest");
+  const [replayRunning, setReplayRunning] = useState(false);
+  const [replayData, setReplayData] = useState(null);
 
   const runPolicyComparison = async () => {
     setRunning(true);
@@ -72,6 +77,21 @@ export default function Amhs() {
       setError(e.message);
     } finally {
       setSensitivityRunning(false);
+    }
+  };
+
+  const runReplay = async () => {
+    setReplayRunning(true);
+    setError(null);
+    try {
+      const result = await api.amhsSimulateReplay({
+        nVehicles, nFoups, nLaps, stockerCapacity, hotLotRatio, policy: replayPolicy,
+      });
+      setReplayData(result);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setReplayRunning(false);
     }
   };
 
@@ -115,6 +135,28 @@ export default function Amhs() {
             {sensitivityRunning ? "실행 중..." : "차량 대수 민감도 실행"}
           </button>
         </div>
+      </div>
+
+      <div className="card">
+        <p className="card-title">OHT 반송 애니메이션 (실시간 실행 결과)</p>
+        <div className="toolbar">
+          <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
+            디스패칭 정책
+            <select value={replayPolicy} onChange={(e) => setReplayPolicy(e.target.value)}>
+              {POLICIES.map((p) => (
+                <option key={p.key} value={p.key}>{p.label}</option>
+              ))}
+            </select>
+          </label>
+          <button onClick={runReplay} disabled={replayRunning}>
+            {replayRunning ? "실행 중..." : "애니메이션 실행"}
+          </button>
+        </div>
+        {replayData && (
+          <div style={{ marginTop: 12 }}>
+            <AmhsAnimation stations={replayData.stations} events={replayData.events} />
+          </div>
+        )}
       </div>
 
       {policyResults && (

@@ -262,6 +262,7 @@ SQLite 스키마: `process_logs`, `fault_records`, `model_metrics`
 - `src/api/client.js`가 백엔드(`http://localhost:8000`)를 호출하는 유일한 지점. CORS는 Vite 기본 포트(5173)와 원안 기준 CRA 포트(3000)를 모두 허용하도록 백엔드에 설정.
 - 이상 탐지 결과 화면은 `X_test.csv`에서 뽑은 실제 SECOM 샘플 3종(정상 / 모델이 탐지한 불량 / 모델이 놓친 불량)을 `src/data/secomSamples.js`에 고정 fixture로 내장해 데모 — 440차원 피처를 사람이 직접 입력할 수 없기 때문.
 - AMHS 물류 화면은 `POST /api/amhs/simulate`를 그때그때 호출해 정책 비교/차량 대수 민감도를 실시간으로 그린다(시뮬레이션이 1초 미만이라 가능). 반송 지연 예측(노트북 08)·차량 예지보전(노트북 09)은 XGBoost/IsolationForest 재학습이 무거워 대시보드에서 실시간으로 돌리지 않고 노트북 실행 결과를 참고용 고정 표로만 보여준다.
+- 같은 화면에 `POST /api/amhs/simulate/replay`로 받은 개별 반송 이벤트를 canvas에 재생하는 2D 애니메이션(`AmhsAnimation.jsx`)을 추가했다 — 8개 스테이션을 원형 트랙으로 배치하고 OHT 차량을 실제 이동 경로대로 움직인다. 캔버스 표시 크기가 마운트 직후엔 아직 확정 안 된 상태라 `ResizeObserver`로 실제 크기가 잡힌 뒤 다시 내부 해상도를 맞추는 처리가 들어가 있다.
 - 로컬 실행: `cd frontend && npm install && npm run dev` (백엔드가 8000번 포트에 떠 있어야 함).
 - 브라우저에서 5개 화면 전부 수동 테스트 완료: 시뮬레이션 실행 → 대시보드/시뮬레이터 화면 갱신, 탐지 실행 → 모델별 비교 카드, 알림 발송 → 상태 변경, 재학습 → 이력 테이블에 새 행 추가, AMHS 정책 비교/민감도 버튼 → 실시간 차트 갱신.
 
@@ -331,6 +332,7 @@ docker compose up --build
 - [x] 반송 지연 예측 (`notebooks/08_amhs_delay_prediction.ipynb`) — run-level split, R² 0.933 / 지연 분류 F1 0.947, 실시간 시스템 부하가 정적 거리보다 압도적으로 중요
 - [x] OHT 차량 예지보전 (`amhs/vehicle_health_simulator.py`, `notebooks/09_amhs_predictive_maintenance.ipynb`) — SECOM 파이프라인(IF+XGBoost+SHAP)을 차량 센서 도메인에 재적용
 - [x] 대시보드 AMHS 화면 추가 — `POST /api/amhs/simulate`로 디스패칭 정책 비교/차량 대수 민감도를 실시간 실행, 브라우저에서 동작 확인
+- [x] AMHS 2D 반송 애니메이션 (`POST /api/amhs/simulate/replay`, `frontend/src/components/AmhsAnimation.jsx`) — OHT 차량이 8개 스테이션 원형 트랙을 실제로 이동하는 모습을 canvas로 재생(재생/일시정지/배속/시간 탐색), Hot Lot 차량은 색으로 구분
 - [x] 예측 기반 디스패칭 + 예지보전 시뮬레이션 피드백 — 노트북 08/09의 모델을 `amhs/predictive.py`·`amhs/maintenance.py`로 실제 시뮬레이션/대시보드에 연결(평가만 하고 끝나지 않게)
 - [x] GitHub Actions CI 추가 (`.github/workflows/tests.yml`) — push/PR마다 backend pytest + frontend Vitest/build + Docker 빌드/헬스체크 자동 실행, README 배지
 - [x] 프론트엔드 테스트 추가 (Vitest + React Testing Library) — 13개 테스트, 컴포넌트/페이지/API 실패 시 부분 결과 표시 로직까지 커버

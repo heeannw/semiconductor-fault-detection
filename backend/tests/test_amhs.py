@@ -59,3 +59,25 @@ def test_amhs_simulate_rejects_out_of_range_n_vehicles(client):
     assert res.status_code == 400
     res = client.post("/api/amhs/simulate", json={"n_vehicles": 21})
     assert res.status_code == 400
+
+
+def test_amhs_simulate_replay_returns_stations_and_events(client):
+    res = client.post(
+        "/api/amhs/simulate/replay",
+        json={"n_vehicles": 3, "n_foups": 6, "n_laps": 1, "policy": "nearest"},
+    )
+    assert res.status_code == 200
+    body = res.json()
+    assert body["n_stations"] == 8
+    assert len(body["stations"]) == 8
+    assert body["sim_duration_sec"] > 0
+    assert len(body["events"]) > 0
+    event = body["events"][0]
+    assert event["from_station"] != event["to_station"]
+    assert event["completed_at"] > event["requested_at"]
+    assert isinstance(event["vehicle_id"], int)
+
+
+def test_amhs_simulate_replay_rejects_unknown_policy(client):
+    res = client.post("/api/amhs/simulate/replay", json={"policy": "not_a_policy"})
+    assert res.status_code == 400

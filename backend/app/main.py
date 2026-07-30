@@ -24,9 +24,11 @@ from .models import FaultRecord, ModelMetric, ProcessLog  # noqa: E402
 from .schemas import (  # noqa: E402
     AlertSendRequest,
     AlertSendResponse,
+    AmhsReplayResponse,
     AmhsSimulateRequest,
     AmhsSimulateResponse,
     AmhsStationOut,
+    AmhsTransportEvent,
     DetectResponse,
     ExplainResponse,
     FaultRecordOut,
@@ -272,8 +274,7 @@ def amhs_stations():
     ]
 
 
-@app.post("/api/amhs/simulate", response_model=AmhsSimulateResponse)
-def amhs_simulate(req: AmhsSimulateRequest):
+def _validate_amhs_request(req: AmhsSimulateRequest) -> None:
     valid_policies = list(AMHS_POLICIES) + ["predictive"]
     if req.policy not in valid_policies:
         raise HTTPException(status_code=400, detail=f"Unknown policy: {req.policy}. Valid: {valid_policies}")
@@ -286,17 +287,24 @@ def amhs_simulate(req: AmhsSimulateRequest):
     if not (0.0 <= req.hot_lot_ratio <= 1.0):
         raise HTTPException(status_code=400, detail="hot_lot_ratio must be between 0.0 and 1.0")
 
+
+def _resolve_amhs_dispatch_policy(req: AmhsSimulateRequest):
     if req.policy == "predictive":
         if not amhs.delay_model_available():
             raise HTTPException(
                 status_code=503,
                 detail="지연 예측 모델이 없습니다. notebooks/08_amhs_delay_prediction.ipynb를 먼저 실행하세요.",
             )
-        dispatch_policy = amhs.make_predictive_dispatch(
+        return amhs.make_predictive_dispatch(
             n_vehicles=req.n_vehicles, launch_interval_sec=req.foup_launch_interval_sec,
         )
-    else:
-        dispatch_policy = AMHS_POLICIES[req.policy]
+    return AMHS_POLICIES[req.policy]
+
+
+@app.post("/api/amhs/simulate", response_model=AmhsSimulateResponse)
+def amhs_simulate(req: AmhsSimulateRequest):
+    _validate_amhs_request(req)
+    dispatch_policy = _resolve_amhs_dispatch_policy(req)
 
     result = amhs.run_simulation(
         n_vehicles=req.n_vehicles,
@@ -323,6 +331,52 @@ def amhs_simulate(req: AmhsSimulateRequest):
         avg_normal_lot_cycle_time_sec=_clean(result["avg_normal_lot_cycle_time_sec"]),
         max_queue_length=result["max_queue_length"],
         completed_transports=result["completed_transports"],
+    )
+
+
+@app.post("/api/amhs/simulate/replay", response_model=AmhsReplayResponse)
+def amhs_simulate_replay(req: AmhsSimulateRequest):
+    """정책 비교용 집계 결과 대신, 프론트엔드 2D 애니메이션이 재생할 수 있도록 개별 반송
+    이벤트(FOUP별 출발/도착 스테이션과 시각) 전체를 반환한다."""
+    _validate_amhs_request(req)
+    dispatch_policy = _resolve_amhs_dispatch_policy(req)
+
+    result = amhs.run_simulation(
+        n_vehicles=req.n_vehicles,
+        n_foups=req.n_foups,
+        n_laps=req.n_laps,
+        foup_launch_interval_sec=req.foup_launch_interval_sec,
+        stocker_capacity=req.stocker_capacity,
+        hot_lot_ratio=req.hot_lot_ratio,
+        dispatch_policy=dispatch_policy,
+        seed=req.seed,
+    )
+
+    log_df = result["transport_log"]
+    events = [
+        AmhsTransportEvent(
+            foup_id=int(r["foup_id"]),
+            from_station=r["from"],
+            to_station=r["to"],
+            requested_at=float(r["requested_at"]),
+            completed_at=float(r["completed_at"]),
+            vehicle_id=int(r["vehicle_id"]),
+            is_hot_lot=bool(r["is_hot_lot"]),
+        )
+        for r in (log_df.to_dict("records") if len(log_df) else [])
+    ]
+    stations = [
+        AmhsStationOut(name=s.name, name_ko=s.name_ko, index=s.index)
+        for s in sorted(amhs.STATIONS.values(), key=lambda s: s.index)
+    ]
+
+    return AmhsReplayResponse(
+        policy=req.policy,
+        n_vehicles=req.n_vehicles,
+        n_stations=len(stations),
+        sim_duration_sec=result["sim_duration_sec"],
+        stations=stations,
+        events=events,
     )
 
 

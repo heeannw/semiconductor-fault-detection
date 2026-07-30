@@ -41,6 +41,7 @@ SK하이닉스 AMHS 직무 면접 준비용으로 작성. AMHS(Automated Materia
 | 반송 지연·혼잡 예측 | `notebooks/08_amhs_delay_prediction.ipynb` — 시뮬레이션 로그로 XGBoost 회귀/분류, `amhs/predictive.py`로 실시간 디스패칭에도 연결 |
 | 차량 예지보전 | `amhs/vehicle_health_simulator.py` + `notebooks/09_amhs_predictive_maintenance.ipynb` — SECOM에서 쓴 IF+XGBoost 앙상블 파이프라인을 OHT 차량 센서(모터 전류, 진동, 온도)에 재적용, `amhs/maintenance.py`로 시뮬레이션에도 피드백 |
 | 대시보드 연동 | `backend/app/main.py`의 `POST /api/amhs/simulate`가 SimPy 시뮬레이션을 즉시 실행(< 1초) — React 대시보드 "AMHS 물류" 화면에서 디스패칭 정책 비교/차량 대수 민감도를 버튼 클릭으로 실시간 확인 |
+| 2D 반송 애니메이션 | `POST /api/amhs/simulate/replay`가 개별 FOUP 반송 이벤트(출발/도착 스테이션, 시각, 차량, hot lot 여부) 전체를 반환 — `frontend/src/components/AmhsAnimation.jsx`가 8개 스테이션을 원형 트랙으로 그리고 OHT 차량을 canvas에서 실시간 재생(재생/일시정지/배속/시간 탐색 지원) |
 
 SECOM/공정 시뮬레이터 파트는 **FDC(Fault Detection and Classification)** — "웨이퍼가 불량인가"를 다뤘다면,
 AMHS 파트는 **그 웨이퍼가 공정 장비까지 제때 도착하는가**를 다룬다. 같은 fab을 서로 다른 두 축(품질 vs 물류)에서
