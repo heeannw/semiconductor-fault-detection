@@ -17,7 +17,7 @@ import os
 
 from google import genai
 
-DEFAULT_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.0-flash")
+DEFAULT_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.1-flash-lite")
 
 
 def gemini_available() -> bool:
