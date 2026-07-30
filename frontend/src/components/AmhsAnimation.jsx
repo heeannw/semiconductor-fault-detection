@@ -19,6 +19,16 @@ function buildVehicleTimelines(events) {
   return byVehicle;
 }
 
+function roundRect(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r);
+  ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r);
+  ctx.arcTo(x, y, x + w, y, r);
+  ctx.closePath();
+}
+
 function vehicleStateAt(timeline, vehicleId, nStations, indexOf, t) {
   let active = null;
   let lastCompleted = null;
@@ -76,11 +86,11 @@ export default function AmhsAnimation({ stations, events }) {
     // 마운트 직후엔 주변 레이아웃(그리드/카드 너비)이 아직 확정되지 않은 상태라
     // canvas.clientWidth를 한 번만 재서 내부 해상도를 고정하면 실제 표시 너비와 어긋나
     // 그림이 가로로 늘어나 보인다 — ResizeObserver로 실제 표시 크기가 바뀔 때마다 다시 잰다.
-    const size = { width: canvas.clientWidth || 560, height: 420 };
+    const size = { width: canvas.clientWidth || 560, height: 460 };
     const resize = () => {
       const dpr = window.devicePixelRatio || 1;
       size.width = canvas.clientWidth || 560;
-      size.height = 420;
+      size.height = 460;
       canvas.width = size.width * dpr;
       canvas.height = size.height * dpr;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -92,12 +102,17 @@ export default function AmhsAnimation({ stations, events }) {
     const style = getComputedStyle(canvas);
     const colors = {
       track: style.getPropertyValue("--gridline").trim() || "#e1e0d9",
+      trackLine: style.getPropertyValue("--baseline").trim() || "#c3c2b7",
       station: style.getPropertyValue("--surface-2").trim() || "#fff",
       stationBorder: style.getPropertyValue("--baseline").trim() || "#c3c2b7",
+      stationIndex: style.getPropertyValue("--text-muted").trim() || "#898781",
+      labelBg: style.getPropertyValue("--surface-1").trim() || "#fcfcfb",
+      labelBorder: style.getPropertyValue("--border").trim() || "rgba(11,11,11,0.1)",
       text: style.getPropertyValue("--text-secondary").trim() || "#52514e",
       muted: style.getPropertyValue("--text-muted").trim() || "#898781",
       vehicle: style.getPropertyValue("--series-1").trim() || "#2a78d6",
       hotLot: style.getPropertyValue("--series-2").trim() || "#eb6834",
+      vehicleRing: style.getPropertyValue("--surface-2").trim() || "#fff",
     };
 
     const n = sortedStations.length;
@@ -106,63 +121,139 @@ export default function AmhsAnimation({ stations, events }) {
     let rafId;
     let lastTs = null;
 
+    const STATION_R = 21;
+    const VEHICLE_R = 11;
+
     const draw = (t) => {
       const { width: cssWidth, height: cssHeight } = size;
       const cx = cssWidth / 2;
-      const cy = cssHeight / 2 - 10;
-      const R = Math.min(cx, cy) - 60;
+      const cy = cssHeight / 2 - 6;
+      const R = Math.min(cx, cy) - 82;
       const posForAngle = (angle) => ({ x: cx + R * Math.cos(angle), y: cy + R * Math.sin(angle) });
 
       ctx.clearRect(0, 0, cssWidth, cssHeight);
 
-      ctx.strokeStyle = colors.track;
-      ctx.lineWidth = 2;
+      // 트랙: 얇은 선 대신 폭이 있는 "도로" + 중앙 점선으로 실제 반송 레일 느낌을 준다.
       ctx.beginPath();
       ctx.arc(cx, cy, R, 0, TWO_PI);
+      ctx.lineWidth = 14;
+      ctx.strokeStyle = colors.track;
       ctx.stroke();
 
+      ctx.beginPath();
+      ctx.setLineDash([3, 7]);
+      ctx.arc(cx, cy, R, 0, TWO_PI);
+      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = colors.trackLine;
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // 스테이션: 그림자 있는 원 + 순번 + 라벨은 알약(pill) 배경 위에 올려 가독성을 높인다.
       sortedStations.forEach((s) => {
         const angle = angleForIndex(s.index);
         const { x, y } = posForAngle(angle);
+
+        ctx.save();
+        ctx.shadowColor = "rgba(11, 11, 11, 0.18)";
+        ctx.shadowBlur = 8;
+        ctx.shadowOffsetY = 2;
         ctx.beginPath();
-        ctx.arc(x, y, 16, 0, TWO_PI);
+        ctx.arc(x, y, STATION_R, 0, TWO_PI);
         ctx.fillStyle = colors.station;
         ctx.fill();
-        ctx.lineWidth = 1.5;
+        ctx.restore();
+
+        ctx.lineWidth = 2;
         ctx.strokeStyle = colors.stationBorder;
+        ctx.beginPath();
+        ctx.arc(x, y, STATION_R, 0, TWO_PI);
         ctx.stroke();
 
-        const labelR = R + 34;
-        const lxOuter = cx + Math.cos(angle) * labelR;
-        const lyOuter = cy + Math.sin(angle) * labelR;
-        ctx.fillStyle = colors.text;
-        ctx.font = "11px sans-serif";
-        ctx.textAlign = Math.cos(angle) > 0.3 ? "left" : Math.cos(angle) < -0.3 ? "right" : "center";
+        ctx.fillStyle = colors.stationIndex;
+        ctx.font = "600 12px sans-serif";
+        ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.fillText(s.name_ko, lxOuter, lyOuter);
+        ctx.fillText(String(s.index + 1), x, y);
+
+        const labelR = R + STATION_R + 30;
+        const lx = cx + Math.cos(angle) * labelR;
+        const ly = cy + Math.sin(angle) * labelR;
+        ctx.font = "600 12px sans-serif";
+        const textW = ctx.measureText(s.name_ko).width;
+        const pillW = textW + 20;
+        const pillH = 24;
+        ctx.save();
+        ctx.shadowColor = "rgba(11, 11, 11, 0.1)";
+        ctx.shadowBlur = 4;
+        ctx.fillStyle = colors.labelBg;
+        roundRect(ctx, lx - pillW / 2, ly - pillH / 2, pillW, pillH, pillH / 2);
+        ctx.fill();
+        ctx.restore();
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = colors.labelBorder;
+        roundRect(ctx, lx - pillW / 2, ly - pillH / 2, pillW, pillH, pillH / 2);
+        ctx.stroke();
+
+        ctx.fillStyle = colors.text;
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(s.name_ko, lx, ly);
       });
 
+      // 차량: 진행 방향으로 옅어지는 잔상을 남겨 움직임을 강조하고, 그림자+흰 테두리로
+      // 트랙/스테이션 위에서도 또렷하게 보이게 한다.
       vehicleIds.forEach((vid) => {
         const timeline = timelines.get(vid) || [];
         const { fromIndex, frac, isHotLot } = vehicleStateAt(timeline, vid, n, indexOf, t);
         const angle = angleForIndex(fromIndex) + frac * (TWO_PI / n);
+        const color = isHotLot ? colors.hotLot : colors.vehicle;
+
+        for (let i = 3; i >= 1; i--) {
+          const trailFrac = Math.max(0, frac - i * 0.018);
+          const trailAngle = angleForIndex(fromIndex) + trailFrac * (TWO_PI / n);
+          const tp = posForAngle(trailAngle);
+          ctx.beginPath();
+          ctx.arc(tp.x, tp.y, VEHICLE_R - i * 2, 0, TWO_PI);
+          ctx.fillStyle = color;
+          ctx.globalAlpha = 0.12 * (4 - i);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+
         const { x, y } = posForAngle(angle);
+        ctx.save();
+        ctx.shadowColor = "rgba(11, 11, 11, 0.3)";
+        ctx.shadowBlur = 6;
         ctx.beginPath();
-        ctx.arc(x, y, 8, 0, TWO_PI);
-        ctx.fillStyle = isHotLot ? colors.hotLot : colors.vehicle;
+        ctx.arc(x, y, VEHICLE_R, 0, TWO_PI);
+        ctx.fillStyle = color;
         ctx.fill();
-        ctx.fillStyle = colors.station;
-        ctx.font = "9px sans-serif";
+        ctx.restore();
+        ctx.lineWidth = 2.5;
+        ctx.strokeStyle = colors.vehicleRing;
+        ctx.stroke();
+
+        ctx.fillStyle = "#ffffff";
+        ctx.font = "700 10px sans-serif";
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText(String(vid), x, y);
       });
 
+      const timeLabel = `${t.toFixed(0)}초 / ${maxTime.toFixed(0)}초`;
+      ctx.font = "600 11px sans-serif";
+      const timeLabelW = ctx.measureText(timeLabel).width;
+      ctx.fillStyle = colors.labelBg;
+      roundRect(ctx, 8, cssHeight - 30, timeLabelW + 16, 22, 11);
+      ctx.fill();
+      ctx.strokeStyle = colors.labelBorder;
+      ctx.lineWidth = 1;
+      roundRect(ctx, 8, cssHeight - 30, timeLabelW + 16, 22, 11);
+      ctx.stroke();
       ctx.fillStyle = colors.muted;
-      ctx.font = "11px sans-serif";
       ctx.textAlign = "left";
-      ctx.textBaseline = "alphabetic";
-      ctx.fillText(`시뮬레이션 시간: ${t.toFixed(0)}초 / ${maxTime.toFixed(0)}초`, 8, cssHeight - 8);
+      ctx.textBaseline = "middle";
+      ctx.fillText(timeLabel, 16, cssHeight - 19);
     };
 
     const tick = (ts) => {
@@ -198,7 +289,7 @@ export default function AmhsAnimation({ stations, events }) {
     <div>
       <canvas
         ref={canvasRef}
-        style={{ width: "100%", height: 420, display: "block" }}
+        style={{ width: "100%", height: 460, display: "block" }}
         role="img"
         aria-label="OHT 반송 애니메이션"
       />
