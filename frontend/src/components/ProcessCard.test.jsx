@@ -81,7 +81,7 @@ describe("ProcessCard", () => {
       },
     };
     render(<ProcessCard log={logWithPrediction} />);
-    expect(screen.getByText("AI 예측 원인 (다중 파라미터 패턴 기반)")).toBeInTheDocument();
+    expect(screen.getByText("AI 예측 원인")).toBeInTheDocument();
     expect(screen.getByText("확신도 87%")).toBeInTheDocument();
     expect(screen.getAllByText("MFC 캘리브레이션 드리프트").length).toBeGreaterThan(0);
     expect(screen.getByText("RF 제너레이터 이상")).toBeInTheDocument();

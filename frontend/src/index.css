@@ -81,6 +81,10 @@ body {
   background: var(--page-plane);
   color: var(--text-primary);
   font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  /* 한글은 어절(공백) 단위로만 줄바꿈 — 기본값(character)으로 두면 "패턴"이 "패"/"턴"으로
+     쪼개지는 것처럼 단어 중간이 잘려 가독성이 떨어진다. */
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
 #root {
@@ -194,7 +198,10 @@ a {
 }
 
 .grid-process {
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  /* 진단/AI 예측/Gemini 질문 블록이 추가되면서 카드 안에 들어가는 내용이 훨씬 많아졌다 —
+     220px는 그 내용을 담기엔 너무 좁아 헤더 텍스트가 줄바꿈되며 깨져 보였다. */
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  align-items: start; /* 카드 하나가 길어져도 같은 줄의 다른 카드가 그 높이까지 늘어나지 않게 */
 }
 
 .stat-tile .value {
@@ -307,8 +314,10 @@ a {
 
 .fault-prediction-header {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
+  gap: 4px 8px;
   color: var(--text-muted);
   margin-bottom: 4px;
 }

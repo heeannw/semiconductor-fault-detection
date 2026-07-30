@@ -73,8 +73,8 @@ export default function ProcessCard({ log }) {
       )}
       {log.predicted_fault && (
         <div className="fault-prediction-block">
-          <div className="fault-prediction-header">
-            AI 예측 원인 (다중 파라미터 패턴 기반)
+          <div className="fault-prediction-header" title="여러 파라미터의 동시 패턴에서 AI가 추론한 원인">
+            <span>AI 예측 원인</span>
             <span className="fault-confidence">확신도 {(log.predicted_fault.confidence * 100).toFixed(0)}%</span>
           </div>
           <div className={`fault-prediction-label${log.predicted_fault.predicted_label === "normal" ? " is-normal" : ""}`}>
@@ -94,7 +94,7 @@ export default function ProcessCard({ log }) {
         </div>
       )}
       <div className="explain-block">
-        <div className="explain-header">AI에게 질문하기 (Gemini — 위 규칙/AI 결과에 근거해서만 답변)</div>
+        <div className="explain-header" title="Gemini가 위 규칙 기반 진단/AI 예측 결과에 근거해서만 답변합니다">AI에게 질문하기</div>
         <div className="explain-input-row">
           <input
             type="text"
