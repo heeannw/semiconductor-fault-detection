@@ -42,6 +42,8 @@ export default function Dashboard() {
   const sortedStatus = status
     ? [...status].sort((a, b) => PROCESS_ORDER.indexOf(a.process) - PROCESS_ORDER.indexOf(b.process))
     : [];
+  const normalStatus = sortedStatus.filter((log) => !log.is_anomaly);
+  const anomalyStatus = sortedStatus.filter((log) => log.is_anomaly);
 
   return (
     <>
@@ -93,10 +95,37 @@ export default function Dashboard() {
         ) : sortedStatus.length === 0 ? (
           <div className="empty-state">아직 공정 데이터가 없습니다.</div>
         ) : (
-          <div className="grid grid-process">
-            {sortedStatus.map((log) => (
-              <ProcessCard key={log.process} log={log} />
-            ))}
+          <div className="status-split">
+            <div className="status-column">
+              <div className="status-column-header">
+                <span className="badge badge-good">정상</span>
+                <span className="status-column-count">{normalStatus.length}건</span>
+              </div>
+              {normalStatus.length === 0 ? (
+                <div className="empty-state">정상 판독이 없습니다.</div>
+              ) : (
+                <div className="grid grid-process">
+                  {normalStatus.map((log) => (
+                    <ProcessCard key={log.process} log={log} />
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="status-column">
+              <div className="status-column-header">
+                <span className="badge badge-critical">이상</span>
+                <span className="status-column-count">{anomalyStatus.length}건</span>
+              </div>
+              {anomalyStatus.length === 0 ? (
+                <div className="empty-state">이상이 발견되지 않았습니다.</div>
+              ) : (
+                <div className="grid grid-process">
+                  {anomalyStatus.map((log) => (
+                    <ProcessCard key={log.process} log={log} />
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
