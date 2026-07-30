@@ -54,4 +54,21 @@ describe("Simulator page", () => {
       expect(screen.getByText(/공정 원인 분류 모델이 없습니다/)).toBeInTheDocument();
     });
   });
+
+  it("splits generated readings into a 정상 column and an 이상 column", async () => {
+    api.simulateProcess.mockResolvedValue([
+      { id: 1, process: "etching", process_name_ko: "식각", params: { pressure: 50, gas_flow: 100, power: 1000 }, is_anomaly: false, created_at: "2026-07-30T00:00:00Z", diagnoses: [] },
+      { id: 2, process: "oxidation", process_name_ko: "산화", params: { temperature: 1300 }, is_anomaly: true, created_at: "2026-07-30T00:00:00Z", diagnoses: [] },
+    ]);
+    const user = userEvent.setup();
+    render(<Simulator />);
+
+    await user.click(screen.getByRole("button", { name: "데이터 생성" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("식각")).toBeInTheDocument();
+      expect(screen.getByText("산화")).toBeInTheDocument();
+    });
+    expect(screen.getAllByText("1건").length).toBe(2); // 정상 1건, 이상 1건 둘 다 "1건"
+  });
 });

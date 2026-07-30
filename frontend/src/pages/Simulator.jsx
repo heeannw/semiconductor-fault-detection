@@ -26,6 +26,9 @@ export default function Simulator() {
   const [faultDemoRunning, setFaultDemoRunning] = useState(false);
   const [faultDemoResult, setFaultDemoResult] = useState(null);
 
+  const normalLogs = latest.filter((log) => !log.is_anomaly);
+  const anomalyLogs = latest.filter((log) => log.is_anomaly);
+
   const historyProcess = process === "all" ? undefined : process;
   const { data: history, reload: reloadHistory } = useAsync(
     () => api.processHistory(historyProcess, 20),
@@ -94,10 +97,37 @@ export default function Simulator() {
       {latest.length > 0 && (
         <div className="card">
           <p className="card-title">방금 생성된 데이터</p>
-          <div className="grid grid-process">
-            {latest.map((log) => (
-              <ProcessCard key={log.id} log={log} />
-            ))}
+          <div className="status-split">
+            <div className="status-column">
+              <div className="status-column-header">
+                <span className="badge badge-good">정상</span>
+                <span className="status-column-count">{normalLogs.length}건</span>
+              </div>
+              {normalLogs.length === 0 ? (
+                <div className="empty-state">정상 판독이 없습니다.</div>
+              ) : (
+                <div className="grid grid-process">
+                  {normalLogs.map((log) => (
+                    <ProcessCard key={log.id} log={log} />
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="status-column">
+              <div className="status-column-header">
+                <span className="badge badge-critical">이상</span>
+                <span className="status-column-count">{anomalyLogs.length}건</span>
+              </div>
+              {anomalyLogs.length === 0 ? (
+                <div className="empty-state">이상이 발견되지 않았습니다.</div>
+              ) : (
+                <div className="grid grid-process">
+                  {anomalyLogs.map((log) => (
+                    <ProcessCard key={log.id} log={log} />
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
