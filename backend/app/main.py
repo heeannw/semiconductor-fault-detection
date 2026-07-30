@@ -14,7 +14,7 @@ ROOT_DIR = Path(__file__).resolve().parents[2]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-from simulator import PROCESS_SPECS, ProcessSimulator  # noqa: E402
+from simulator import PROCESS_SPECS, ProcessSimulator, diagnose  # noqa: E402
 
 import amhs  # noqa: E402
 
@@ -30,6 +30,7 @@ from .schemas import (  # noqa: E402
     AmhsStationOut,
     AmhsTransportEvent,
     DetectResponse,
+    DiagnosisOut,
     ExplainResponse,
     FaultRecordOut,
     FeatureImportanceOut,
@@ -72,11 +73,20 @@ app.add_middleware(
 
 
 def _process_log_to_out(log: ProcessLog) -> ProcessLogOut:
+    params = json.loads(log.params_json)
+    diagnoses = [
+        DiagnosisOut(
+            parameter=d.parameter, value=d.value, spec_low=d.spec_low, spec_high=d.spec_high,
+            unit=d.unit, direction=d.direction, label=d.label, cause=d.cause, action=d.action,
+        )
+        for d in diagnose(log.process, params)
+    ]
     return ProcessLogOut(
         id=log.id,
         process=log.process,
         process_name_ko=log.process_name_ko,
-        params=json.loads(log.params_json),
+        params=params,
+        diagnoses=diagnoses,
         is_anomaly=log.is_anomaly,
         created_at=log.created_at,
     )

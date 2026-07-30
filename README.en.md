@@ -176,6 +176,14 @@ Separate from the ML-based detector: this covers the most basic tool of fab qual
 - **Western Electric rule detection** (etching chamber pressure, evaluated on a held-out anomaly stream): precision 0.684, **recall 1.0**, F1 0.813 — the simulator's injected anomalies clearly leave the normal range, so a classic 3-sigma control chart catches nearly all of them.
 - SECOM's ML result (F1 0.228) isn't directly comparable (different data), but the contrast illustrates a real distinction: **SPC is simple, explainable rule-based detection; ML learns multivariate patterns.** In practice, fabs often start a new process with SPC and layer ML on top once enough data accumulates.
 
+#### Root-cause label + suggested fix (rule-based, `simulator/diagnosis.py`)
+
+The original goal of this project was a pipeline that goes "detect anomaly → why → how to fix it." SHAP (above) shows which features drove a SECOM verdict, but SECOM's features are anonymized (`feature_1`, `feature_2`, ...), so there's no way to turn that into a human-readable diagnosis — an inherent limitation of the dataset, not something this project can fix. The process simulator's parameters, on the other hand, have real names, units, and spec ranges, so "this parameter went out of spec in this direction" is enough on its own to look up a semiconductor-process-domain-informed root cause and suggested fix, as a static rule.
+
+- **No LLM API calls at all** — all 8 processes × 24 parameters × 2 directions (48 combinations total) are pre-written as static templates. Fully deterministic, zero cost.
+- `simulator/tests/test_diagnosis.py` includes a completeness test asserting all 24 parameters × 2 directions are mapped — if even one template were missing, a reading would show "anomaly" with no cause or fix, a silent blind spot this test exists to catch.
+- Exposed via the `diagnoses` field on `POST /api/process/simulate` / `/api/process/status` / `/api/process/history`; the `ProcessCard` component on the dashboard shows a per-parameter root-cause label, likely cause, and suggested action whenever a reading is anomalous.
+
 #### Feature selection experiment (`notebooks/04_feature_selection.ipynb`)
 
 Tested whether a correlation filter (|corr| > 0.95 removed, 440→267 features) plus XGBoost-importance-based selection could beat the 440-feature baseline. Each candidate K (30/50/100/200/267) was tuned with the same 5-fold OOF procedure as the baseline model, and only the OOF-best (k=30) was evaluated on test, once.
@@ -316,3 +324,4 @@ docker compose up --build
 - [x] Yield-to-cost quantification framework (`notebooks/11`) — cost-mapped confusion matrix, F1-optimal vs cost-optimal thresholds, re-inspection capacity constraint, an honest note on where the ranking is unstable at this sample size
 - [x] English documentation (this file, `docs/AMHS.en.md`)
 - [x] Hugging Face Space deployment prep (`Dockerfile.space`, static-file serving added to `backend/app/main.py`, verified via a `space-build` CI job that actually builds and health-checks the container) — actual deployment held back, though: this account's Docker SDK Space tier is paid-gated (only Static/Gradio are free), and per this project's zero-cost constraint, local execution (`docker compose up`) plus CI verification stand in for a live deployment instead
+- [x] Root-cause label + suggested fix (`simulator/diagnosis.py`) — when a process parameter goes out of spec, instantly proposes a domain-informed likely cause and fix via static rules (no LLM, no cost). All 8 processes × 24 parameters × 2 directions verified mapped by a completeness test; exposed via the `diagnoses` field on `POST /api/process/simulate` and friends, shown on the dashboard

@@ -268,6 +268,36 @@ a {
   color: var(--text-muted);
 }
 
+.diagnosis-block {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.diagnosis-item {
+  font-size: 12px;
+}
+
+.diagnosis-label {
+  font-weight: 600;
+  color: var(--status-critical);
+  margin-bottom: 4px;
+}
+
+.diagnosis-row {
+  display: flex;
+  gap: 6px;
+  color: var(--text-secondary);
+}
+
+.diagnosis-row span {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
 .toolbar {
   display: flex;
   gap: 8px;

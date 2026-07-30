@@ -181,6 +181,14 @@ ML 기반 이상 탐지(SECOM)와는 별개로, **fab 품질관리의 가장 기
 - **Western Electric 룰 탐지** (식각 압력, baseline과 분리된 데이터로 평가): precision 0.684, **recall 1.0**, F1 0.813 — 시뮬레이터 이상치가 규칙상 정상 범위를 확실히 벗어나게 만들어지므로 3시그마 관리도로도 거의 다 잡힌다.
 - SECOM ML(F1 0.228)과 숫자로 직접 비교할 수는 없지만(다른 데이터), **SPC는 설명 가능한 단순 규칙, ML은 다변량 패턴 학습**이라는 관점 차이를 보여준다. 실무에서도 새 공정엔 먼저 SPC를 걸고 데이터가 쌓이면 ML로 고도화하는 순서를 밟는 경우가 많다.
 
+#### 핵심 에러 문구 + 조치 제안 (규칙 기반, `simulator/diagnosis.py`)
+
+"이상 탐지 → 왜 이상인지 → 어떻게 고치는지"까지 이어지는 게 이 프로젝트의 원래 목표였다. SHAP(위)은 SECOM 판정에서 "어떤 피처가 기여했는지"는 보여주지만, SECOM 피처 자체가 익명화돼 있어(`feature_1`, `feature_2`, ...) 사람이 읽을 수 있는 진단 문구로 바꿀 수 없다 — 이는 이 프로젝트가 해결할 수 없는 데이터셋 자체의 한계다. 반면 공정 시뮬레이터의 파라미터는 실제 이름·단위·정상 범위가 있으므로, "이 파라미터가 이 방향으로 규격을 벗어났다"는 사실만으로 반도체 공정 도메인 지식 기반의 원인 후보/조치를 규칙으로 제안할 수 있다.
+
+- **LLM API를 전혀 호출하지 않는다** — 8개 공정 24개 파라미터 × 상한/하한 2방향, 총 48개 조합을 정적 템플릿으로 미리 써뒀다. 완전히 결정적(deterministic)이고 비용이 전혀 발생하지 않는다.
+- `simulator/tests/test_diagnosis.py`에 "24개 파라미터 × 2방향 전체가 매핑됐는지" 검증하는 완결성 테스트를 포함 — 템플릿 하나라도 빠지면 "이상"이라고만 뜨고 원인/조치 없는 사각지대가 생기는 걸 방지한다.
+- `POST /api/process/simulate`/`/api/process/status`/`/api/process/history` 응답의 `diagnoses` 필드로 노출되고, 프론트엔드 `ProcessCard`에서 이상 발생 시 파라미터별로 "핵심 에러 문구 / 원인 후보 / 조치 제안"을 바로 보여준다.
+
 #### 피처 선택 실험 (6주차 확장, `notebooks/04_feature_selection.ipynb`)
 
 상관관계 필터(|corr|>0.95 제거, 440→267개) + XGBoost 중요도 기반 피처 선택으로 F1을 더 끌어올릴 수 있는지 실험했다. K 후보(30/50/100/200/267)마다 03과 동일한 5-fold OOF로 임계값과 OOF F1을 구하고, **OOF 기준 최고(k=30)를 test에 최초 1회만** 적용했다.
@@ -342,3 +350,4 @@ docker compose up --build
 - [x] AMHS 실제 문헌 근거 보강 (`docs/AMHS.md` §8 참고 문헌) — 실제 논문 6건(Agrawal & Heragu 2006 서베이, Liao & Wang 2005 hot-lot DPD, Wang et al. 2017, Im et al. 헝가리안 알고리즘, 다변수 OHT 스케줄링, 2025 멀티에이전트 RL) 인용, 각각이 구현의 어느 부분과 겹치고 어디서 갈리는지 명시 + 솔직한 한계 서술
 - [x] 수율→비용 정량화 프레임워크 (`notebooks/11_cost_sensitive_threshold.ipynb`) — confusion matrix를 비용 항목으로 매핑, F1-최적/비용-최적 임계값 비교, 재검사 캐파 제약 추가(무제약 최적값이 웨이퍼 90%를 재검사로 보내는 비현실적 정책이었던 문제를 캐파 상한으로 해결), test set에서 정책별 우열이 뒤집힐 수 있다는 한계까지 정직하게 기록
 - [x] Hugging Face Space 배포 준비 (`Dockerfile.space`, `backend/app/main.py`의 정적 파일 서빙, CI `space-build` job으로 빌드+헬스체크 검증 완료) — 단, 실제 배포는 보류. 이 계정에서 Docker SDK Space가 유료로 막혀 있어(Static/Gradio만 무료), 비용을 들이지 않는다는 원칙에 따라 실제 배포 대신 로컬 실행(`docker compose up`)과 CI 검증으로 대체
+- [x] 핵심 에러 문구 + 조치 제안 (`simulator/diagnosis.py`) — 공정 파라미터가 규격을 벗어나면 반도체 공정 도메인 지식 기반의 원인 후보/조치를 정적 규칙(LLM 미사용, 비용 없음)으로 즉시 제안. 8개 공정 24개 파라미터 × 2방향 전체 매핑을 테스트로 검증, `POST /api/process/simulate` 등의 `diagnoses` 필드로 노출, 대시보드에 표시

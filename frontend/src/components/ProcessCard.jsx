@@ -35,6 +35,19 @@ export default function ProcessCard({ log }) {
           </span>
         </div>
       ))}
+      {log.diagnoses?.length > 0 && (
+        <div className="diagnosis-block">
+          {log.diagnoses.map((d) => (
+            <div className="diagnosis-item" key={d.parameter}>
+              <div className="diagnosis-label">
+                {d.label} ({d.direction === "high" ? "↑ 상한 초과" : "↓ 하한 미달"}: {d.value} {d.unit}, 규격 {d.spec_low}~{d.spec_high}{d.unit})
+              </div>
+              <div className="diagnosis-row"><span>원인 후보</span>{d.cause}</div>
+              <div className="diagnosis-row"><span>조치 제안</span>{d.action}</div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

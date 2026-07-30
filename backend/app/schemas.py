@@ -8,6 +8,18 @@ class SimulateRequest(BaseModel):
     anomaly_ratio: float = 0.1
 
 
+class DiagnosisOut(BaseModel):
+    parameter: str
+    value: float
+    spec_low: float
+    spec_high: float
+    unit: str
+    direction: str  # "high" | "low"
+    label: str
+    cause: str
+    action: str
+
+
 class ProcessLogOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -17,6 +29,7 @@ class ProcessLogOut(BaseModel):
     params: dict[str, float]
     is_anomaly: bool
     created_at: datetime
+    diagnoses: list[DiagnosisOut] = []
 
 
 class SecomDetectRequest(BaseModel):

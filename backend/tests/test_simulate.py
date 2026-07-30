@@ -42,3 +42,22 @@ def test_process_history_filters_by_process(client):
     logs = res.json()
     assert len(logs) >= 1
     assert all(log["process"] == "packaging" for log in logs)
+
+
+def test_simulate_anomaly_includes_root_cause_diagnosis(client):
+    res = client.post("/api/process/simulate", json={"process": "etching", "anomaly_ratio": 1.0})
+    assert res.status_code == 200
+    log = res.json()[0]
+    assert log["is_anomaly"] is True
+    assert len(log["diagnoses"]) > 0
+    d = log["diagnoses"][0]
+    assert d["direction"] in ("high", "low")
+    assert d["label"] and d["cause"] and d["action"]
+
+
+def test_simulate_normal_has_no_diagnosis(client):
+    res = client.post("/api/process/simulate", json={"process": "etching", "anomaly_ratio": 0.0})
+    assert res.status_code == 200
+    log = res.json()[0]
+    assert log["is_anomaly"] is False
+    assert log["diagnoses"] == []

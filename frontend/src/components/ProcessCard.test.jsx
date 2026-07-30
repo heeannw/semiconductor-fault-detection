@@ -30,4 +30,27 @@ describe("ProcessCard", () => {
     expect(screen.getByText("pressure")).toBeInTheDocument();
     expect(screen.getByText(/42\.1 mTorr/)).toBeInTheDocument();
   });
+
+  it("shows no root-cause diagnosis block when diagnoses is empty", () => {
+    const { container } = render(<ProcessCard log={NORMAL_LOG} />);
+    expect(container.querySelector(".diagnosis-block")).not.toBeInTheDocument();
+  });
+
+  it("shows root-cause label/cause/action when diagnoses are present", () => {
+    const logWithDiagnosis = {
+      ...ANOMALY_LOG,
+      params: { pressure: 150, gas_flow: 100.5, power: 900.0 },
+      diagnoses: [
+        {
+          parameter: "pressure", value: 150, spec_low: 5, spec_high: 100, unit: "mTorr",
+          direction: "high", label: "식각 압력 상한 초과",
+          cause: "배기 펌프 성능 저하 또는 밸브 드리프트", action: "펌프 점검, MFC 캘리브레이션",
+        },
+      ],
+    };
+    render(<ProcessCard log={logWithDiagnosis} />);
+    expect(screen.getByText(/식각 압력 상한 초과/)).toBeInTheDocument();
+    expect(screen.getByText("배기 펌프 성능 저하 또는 밸브 드리프트")).toBeInTheDocument();
+    expect(screen.getByText("펌프 점검, MFC 캘리브레이션")).toBeInTheDocument();
+  });
 });
