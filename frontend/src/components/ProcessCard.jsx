@@ -1,3 +1,6 @@
+import { useState } from "react";
+import { api } from "../api/client.js";
+
 const PARAM_UNITS = {
   temperature: "°C",
   oxygen_concentration: "ppb",
@@ -19,6 +22,25 @@ const PARAM_UNITS = {
 };
 
 export default function ProcessCard({ log }) {
+  const [question, setQuestion] = useState("");
+  const [answer, setAnswer] = useState(null);
+  const [asking, setAsking] = useState(false);
+  const [askError, setAskError] = useState(null);
+
+  const askQuestion = async () => {
+    if (!question.trim() || asking) return;
+    setAsking(true);
+    setAskError(null);
+    try {
+      const result = await api.processExplain({ process: log.process, params: log.params, question });
+      setAnswer(result.answer);
+    } catch (e) {
+      setAskError(e.message);
+    } finally {
+      setAsking(false);
+    }
+  };
+
   return (
     <div className={`process-card${log.is_anomaly ? " is-anomaly" : ""}`}>
       <div className="process-title">
@@ -71,6 +93,23 @@ export default function ProcessCard({ log }) {
             ))}
         </div>
       )}
+      <div className="explain-block">
+        <div className="explain-header">AI에게 질문하기 (Gemini — 위 규칙/AI 결과에 근거해서만 답변)</div>
+        <div className="explain-input-row">
+          <input
+            type="text"
+            placeholder="예: 이 상황을 좀 더 자세히 설명해줘"
+            value={question}
+            onChange={(e) => setQuestion(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && askQuestion()}
+          />
+          <button onClick={askQuestion} disabled={asking || !question.trim()}>
+            {asking ? "..." : "질문"}
+          </button>
+        </div>
+        {askError && <div className="explain-error">{askError}</div>}
+        {answer && <div className="explain-answer">{answer}</div>}
+      </div>
     </div>
   );
 }

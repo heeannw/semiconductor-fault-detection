@@ -54,6 +54,16 @@ class FaultDemoResponse(BaseModel):
     predicted_fault: FaultPredictionOut
 
 
+class ProcessExplainRequest(BaseModel):
+    process: str
+    params: dict[str, float]
+    question: str
+
+
+class ProcessExplainResponse(BaseModel):
+    answer: str
+
+
 class SecomDetectRequest(BaseModel):
     features: dict[str, float]  # feature_name -> value (models/feature_columns.joblib 기준)
 

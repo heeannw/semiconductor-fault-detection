@@ -197,6 +197,15 @@ ML 기반 이상 탐지(SECOM)와는 별개로, **fab 품질관리의 가장 기
 - **정직하게 발견한 사실**: 이 모델을 대시보드의 기본 "데이터 생성" 버튼(파라미터를 독립적으로 무작위 이탈시키는 방식)에 그대로 연결했더니, 학습된 상관 패턴과 안 맞아서 값이 명백히 규격을 벗어나도 대부분 "정상"으로 오판했다. 규칙 기반 진단과 AI 분류기가 **서로 다른 질문**에 답하기 때문이다 — 규칙은 "이 파라미터 하나가 규격을 벗어났나", AI는 "이 다중 파라미터 패턴이 내가 학습한 고장 신호와 닮았나". 그래서 실제로 학습된 상관 패턴을 주입해 AI가 무엇을 잘 잡아내는지 직접 보여주는 별도 데모(`POST /api/process/fault-demo`, 대시보드 "AI 원인 분류 데모" 카드)를 추가했다 — 30개 표본으로 처음 검증했다가 60%가 나와 당황했는데, 200개로 다시 재보니 83.5%로 정상이었다(작은 표본의 우연이었다는 걸 확인하고 테스트도 n=150/임계값 0.65로 고쳤다).
 - `POST /api/process/simulate` 등에도 `predicted_fault` 필드로 연결해, 규칙 기반 진단과 AI 예측을 나란히 보여준다(대시보드 `ProcessCard`).
 
+#### Gemini 기반 자연어 설명 레이어 (선택 기능, `backend/app/llm_explain.py`)
+
+지금까지의 원인 진단/분류는 전부 규칙(`diagnosis.py`)이나 학습된 분류 모델(`fault_classifier.py`)이 낸 **결정론적 결과**다. 여기에 자연어로 자유롭게 질문할 수 있는 설명 레이어를 Gemini API(무료 등급)로 얹었다 — 단, **Gemini가 새로운 판단을 내리게 하지 않는다.** 규칙 기반 진단 결과와 AI 분류 결과를 프롬프트에 사실로 박아 넣고 "이 사실에 근거해서만 답하라"고 제한하는 RAG 방식이다. 반도체 공정 원인 진단처럼 틀리면 실제 피해로 이어질 수 있는 판단을 LLM의 환각에 맡기지 않기 위한 설계다.
+
+- `GEMINI_API_KEY`가 `.env`(커밋 안 됨, `.env.example` 참고)에 없으면 이 기능만 503으로 우아하게 비활성화되고 나머지는 그대로 동작한다 — 다른 ML 의존 기능들과 같은 패턴.
+- 사용자가 명시적으로 질문을 입력했을 때만 1회 호출하고, 자동 반복 호출이나 재시도 루프는 없다 — 무료 등급 쿼터를 불필요하게 쓰지 않기 위함.
+- 자동화 테스트(`backend/tests/test_process_explain.py`)는 실제 Gemini API를 호출하지 않는다 — `gemini_available`/`explain`을 monkeypatch로 가짜 함수로 바꿔서 "서버가 클라이언트 입력을 그대로 믿지 않고 진단 결과를 다시 계산해 근거로 넘기는지"만 검증한다. CI에는 키를 넣지 않았으므로 이 기능은 CI에서 항상 비활성 상태로 통과한다.
+- 대시보드 `ProcessCard`에 "AI에게 질문하기" 입력창으로 연결.
+
 #### 피처 선택 실험 (6주차 확장, `notebooks/04_feature_selection.ipynb`)
 
 상관관계 필터(|corr|>0.95 제거, 440→267개) + XGBoost 중요도 기반 피처 선택으로 F1을 더 끌어올릴 수 있는지 실험했다. K 후보(30/50/100/200/267)마다 03과 동일한 5-fold OOF로 임계값과 OOF F1을 구하고, **OOF 기준 최고(k=30)를 test에 최초 1회만** 적용했다.
@@ -260,7 +269,7 @@ SQLite 스키마: `process_logs`, `fault_records`, `model_metrics`
 
 - `POST /api/process/simulate`와 `POST /api/ai/detect`는 완전히 분리되어 있다. 전자는 `simulator/`가 만든 물리 파라미터(3개 내외)와 시뮬레이터 자체의 정상/이상 판정을 `process_logs`에 기록할 뿐, SECOM 학습 모델을 전혀 거치지 않는다. 후자만 SECOM과 동일한 피처 형식(`models/feature_columns.joblib`, 440개(전처리 후 최종 피처 수))을 입력받아 실제 학습된 Isolation Forest + XGBoost 앙상블로 추론하고 `fault_records`에 기록한다. 두 피처 공간은 차원이 달라 직접 연결할 수 없다는 게 "구조 명확화" 절의 핵심이며, 이 분리가 그 설계를 코드 수준까지 반영한 것이다.
 - `POST /api/model/retrain`은 `notebooks/03_modeling.ipynb`의 5-fold OOF 임계값 튜닝은 재사용하고(오프라인에서 이미 확정된 값), 최신 `data/processed` 데이터로 두 모델만 다시 학습해 `models/`에 덮어쓴다.
-- 로컬 실행: `.venv/Scripts/python -m uvicorn backend.app.main:app --port 8000` (프로젝트 루트에서), Swagger UI는 `/docs`.
+- 로컬 실행: `.venv/Scripts/python -m uvicorn backend.app.main:app --port 8000` (프로젝트 루트에서), Swagger UI는 `/docs`. Gemini 설명 기능을 쓰려면 `.env.example`을 `.env`로 복사해 `GEMINI_API_KEY`를 채워 넣는다(선택 사항 — 없어도 나머지 전부 정상 동작).
 - 11개 엔드포인트 전부 실제 SECOM 테스트 샘플/시뮬레이터 데이터로 curl 스모크 테스트 완료.
 - 자동화 테스트: `.venv/Scripts/python -m pytest` (프로젝트 루트에서). `SEMISENSE_DATABASE_URL` 환경변수로 테스트 전용 SQLite 파일을 써서 실 서비스 DB(`backend/semisense.db`)를 건드리지 않는다. `models/`가 없는 상태에서 실행하면 ML 의존 테스트만 스킵되고 시뮬레이터/기본 엔드포인트 테스트는 그대로 통과한다.
 
@@ -360,3 +369,4 @@ docker compose up --build
 - [x] Hugging Face Space 배포 준비 (`Dockerfile.space`, `backend/app/main.py`의 정적 파일 서빙, CI `space-build` job으로 빌드+헬스체크 검증 완료) — 단, 실제 배포는 보류. 이 계정에서 Docker SDK Space가 유료로 막혀 있어(Static/Gradio만 무료), 비용을 들이지 않는다는 원칙에 따라 실제 배포 대신 로컬 실행(`docker compose up`)과 CI 검증으로 대체
 - [x] 핵심 에러 문구 + 원인/영향/조치 제안 (`simulator/diagnosis.py`) — 공정 파라미터가 규격을 벗어나면 반도체 공정 도메인 지식 기반의 원인 후보/영향/조치를 정적 규칙(LLM 미사용, 비용 없음)으로 즉시 제안. 8개 공정 24개 파라미터 × 2방향 전체 매핑을 테스트로 검증, `POST /api/process/simulate` 등의 `diagnoses` 필드로 노출, 대시보드에 표시
 - [x] AI 원인 분류 모델 (`simulator/fault_scenarios.py`, `notebooks/12_fault_scenario_classification.ipynb`) — 규칙이 아니라 다중 파라미터 상관 패턴에서 XGBoost가 원인을 추론(8개 공정 81~87% 정확도). 기본 데모 데이터(독립 무작위 이탈)와는 패턴이 안 맞아 대부분 "정상"으로 오판한다는 걸 발견해 `POST /api/process/fault-demo`(실제 학습 패턴 주입 데모, 200표본 재검증 83.5%)를 추가로 연결
+- [x] Gemini 기반 자연어 설명 레이어 (`backend/app/llm_explain.py`, `POST /api/process/explain`, 선택 기능) — 무료 등급 API, 규칙/AI 진단 결과를 사실로 고정해 그 근거로만 답하도록 제한(RAG 방식, 새 판단 생성 금지). 키 없으면 503으로 우아하게 비활성화, 테스트는 실제 API 호출 없이 monkeypatch로 검증

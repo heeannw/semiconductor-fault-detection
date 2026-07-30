@@ -393,6 +393,50 @@ a {
   color: var(--text-muted);
 }
 
+.explain-block {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border);
+}
+
+.explain-header {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+
+.explain-input-row {
+  display: flex;
+  gap: 6px;
+}
+
+.explain-input-row input {
+  flex: 1;
+  font-size: 12px;
+  padding: 6px 8px;
+}
+
+.explain-input-row button {
+  font-size: 12px;
+  padding: 6px 10px;
+}
+
+.explain-error {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--status-critical);
+}
+
+.explain-answer {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  background: var(--surface-2);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
 .toolbar {
   display: flex;
   gap: 8px;

@@ -16,6 +16,7 @@ ROOT_DIR = Path(__file__).resolve().parents[2]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
+from . import config  # noqa: E402,F401  (.env를 다른 로컬 모듈보다 먼저 읽어들인다)
 from simulator import (  # noqa: E402
     FAULT_SCENARIOS,
     PROCESS_NAMES_KO,
@@ -30,7 +31,7 @@ from simulator import (  # noqa: E402
 
 import amhs  # noqa: E402
 
-from . import ml, training  # noqa: E402
+from . import llm_explain, ml, training  # noqa: E402
 from .database import Base, SessionLocal, engine, get_db  # noqa: E402
 from .models import FaultRecord, ModelMetric, ProcessLog  # noqa: E402
 from .schemas import (  # noqa: E402
@@ -51,6 +52,8 @@ from .schemas import (  # noqa: E402
     FeatureImportanceOut,
     HealthResponse,
     ModelMetricOut,
+    ProcessExplainRequest,
+    ProcessExplainResponse,
     ProcessLogOut,
     RetrainResponse,
     SecomDetectRequest,
@@ -184,6 +187,33 @@ def process_fault_demo(req: FaultDemoRequest):
             probabilities=prediction.probabilities,
         ),
     )
+
+
+@app.post("/api/process/explain", response_model=ProcessExplainResponse)
+def process_explain(req: ProcessExplainRequest):
+    """규칙 기반 진단(`diagnose`)과 AI 분류 결과(`predict_fault`)를 Gemini에게 그대로
+    근거로 주고, 그 사실에 근거해서만 자연어로 설명하게 한다 — Gemini가 새로운 원인을
+    지어내지 않도록 프롬프트에서 명시적으로 제한한다(`llm_explain.py` 참고). 사용자가
+    명시적으로 질문했을 때만 1회 호출되고, 자동 반복 호출은 없다."""
+    if req.process not in PROCESS_SPECS:
+        raise HTTPException(status_code=400, detail=f"Unknown process: {req.process}. Valid: {list(PROCESS_SPECS)}")
+    if not llm_explain.gemini_available():
+        raise HTTPException(
+            status_code=503,
+            detail="GEMINI_API_KEY가 설정되지 않았습니다. .env에 키를 추가하세요.",
+        )
+
+    diagnoses = diagnose(req.process, req.params)
+    prediction = predict_fault(req.process, req.params)
+
+    try:
+        answer = llm_explain.explain(
+            PROCESS_NAMES_KO[req.process], req.params, diagnoses, prediction, req.question,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Gemini 호출 실패: {e}")
+
+    return ProcessExplainResponse(answer=answer)
 
 
 @app.post("/api/ai/detect", response_model=DetectResponse)

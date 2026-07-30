@@ -1,6 +1,14 @@
-import { describe, expect, it } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import ProcessCard from "./ProcessCard.jsx";
+import { api } from "../api/client.js";
+
+vi.mock("../api/client.js", () => ({
+  api: {
+    processExplain: vi.fn(),
+  },
+}));
 
 const NORMAL_LOG = {
   process: "etching",
@@ -91,5 +99,39 @@ describe("ProcessCard", () => {
     };
     const { container } = render(<ProcessCard log={logWithNormalPrediction} />);
     expect(container.querySelector(".fault-prediction-label.is-normal")).toBeTruthy();
+  });
+
+  it("asks a question via Gemini and shows the grounded answer", async () => {
+    api.processExplain.mockResolvedValue({ answer: "압력이 규격 상한을 넘었습니다." });
+    const user = userEvent.setup();
+    render(<ProcessCard log={ANOMALY_LOG} />);
+
+    await user.type(screen.getByPlaceholderText("예: 이 상황을 좀 더 자세히 설명해줘"), "왜 이상이야?");
+    await user.click(screen.getByRole("button", { name: "질문" }));
+
+    await waitFor(() => {
+      expect(api.processExplain).toHaveBeenCalledWith({
+        process: "etching", params: ANOMALY_LOG.params, question: "왜 이상이야?",
+      });
+      expect(screen.getByText("압력이 규격 상한을 넘었습니다.")).toBeInTheDocument();
+    });
+  });
+
+  it("shows an error message when the explain call fails (e.g. no Gemini key configured)", async () => {
+    api.processExplain.mockRejectedValue(new Error("GEMINI_API_KEY가 설정되지 않았습니다."));
+    const user = userEvent.setup();
+    render(<ProcessCard log={ANOMALY_LOG} />);
+
+    await user.type(screen.getByPlaceholderText("예: 이 상황을 좀 더 자세히 설명해줘"), "왜?");
+    await user.click(screen.getByRole("button", { name: "질문" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("GEMINI_API_KEY가 설정되지 않았습니다.")).toBeInTheDocument();
+    });
+  });
+
+  it("disables the ask button until a question is typed", () => {
+    render(<ProcessCard log={NORMAL_LOG} />);
+    expect(screen.getByRole("button", { name: "질문" })).toBeDisabled();
   });
 });

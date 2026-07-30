@@ -25,6 +25,11 @@ export const api = {
     request(`/api/process/history?${new URLSearchParams({ ...(process && { process }), limit })}`),
   faultDemo: (process) =>
     request("/api/process/fault-demo", { method: "POST", body: JSON.stringify({ process }) }),
+  processExplain: ({ process, params, question }) =>
+    request("/api/process/explain", {
+      method: "POST",
+      body: JSON.stringify({ process, params, question }),
+    }),
 
   detect: (features) =>
     request("/api/ai/detect", { method: "POST", body: JSON.stringify({ features }) }),

@@ -18,3 +18,4 @@ pytest
 httpx
 torch
 simpy
+google-genai
