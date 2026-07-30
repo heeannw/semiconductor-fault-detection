@@ -177,6 +177,19 @@ a {
   margin-top: 16px;
 }
 
+/* .card + .card는 세로로 쌓인 카드 사이 간격용인데, 그리드 안에서도 형제 셀렉터가 그대로
+   맞아 떨어져서(예: 통계 박스 4개) 첫 번째 칸만 마진이 없고 나머지가 밀려 높이/위치가
+   어긋나 보였다 — 그리드 안에서는 .grid의 gap이 이미 간격을 주므로 마진을 0으로 되돌린다. */
+.grid .card + .card {
+  margin-top: 0;
+}
+
+/* 반대로 그리드 다음에 카드가 바로 오면(통계 박스 그리드 → 수율 차트 카드) 위 규칙이
+   적용 안 돼 간격이 아예 없어 붙어 보였다. */
+.grid + .card {
+  margin-top: 16px;
+}
+
 .card-title {
   font-size: 13px;
   color: var(--text-secondary);
