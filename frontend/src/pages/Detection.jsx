@@ -19,7 +19,7 @@ const TEST_SET_COMPARISON = [
 
 function ModelVerdict({ label, isAnomaly, score }) {
   return (
-    <div className="card" style={{ flex: 1 }}>
+    <div className="card">
       <p className="card-title">{label}</p>
       <span className={`badge ${isAnomaly ? "badge-critical" : "badge-good"}`}>
         {isAnomaly ? "이상 탐지" : "정상"}
@@ -109,7 +109,7 @@ export default function Detection() {
       {result && (
         <div className="card">
           <p className="card-title">모델별 탐지 결과 비교 (fault_id: {result.fault_id})</p>
-          <div style={{ display: "flex", gap: 16 }}>
+          <div className="card-row">
             <ModelVerdict label="Isolation Forest" isAnomaly={result.is_anomaly_isolation_forest} score={result.if_score} />
             <ModelVerdict label="XGBoost" isAnomaly={result.is_anomaly_xgboost} score={result.xgb_proba} />
             <ModelVerdict label="Ensemble (투표)" isAnomaly={result.is_anomaly_ensemble} score={result.ensemble_score} />
