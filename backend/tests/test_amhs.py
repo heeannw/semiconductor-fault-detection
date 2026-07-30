@@ -81,3 +81,33 @@ def test_amhs_simulate_replay_returns_stations_and_events(client):
 def test_amhs_simulate_replay_rejects_unknown_policy(client):
     res = client.post("/api/amhs/simulate/replay", json={"policy": "not_a_policy"})
     assert res.status_code == 400
+
+
+def test_amhs_simulate_replay_returns_congestion_samples(client):
+    res = client.post(
+        "/api/amhs/simulate/replay",
+        json={"n_vehicles": 2, "n_foups": 6, "n_laps": 1, "stocker_capacity": 1, "policy": "nearest"},
+    )
+    assert res.status_code == 200
+    body = res.json()
+    assert body["stocker_capacity"] == 1
+    assert len(body["congestion"]) > 0
+    sample = body["congestion"][0]
+    assert sample["station"]
+    assert sample["queue_length"] >= 0
+    assert body["maintenance_events"] == []  # enable_maintenance 기본값 False
+
+
+def test_amhs_simulate_replay_with_maintenance_enabled(client, requires_pm_model):
+    res = client.post(
+        "/api/amhs/simulate/replay",
+        json={
+            "n_vehicles": 4, "n_foups": 15, "n_laps": 2,
+            "foup_launch_interval_sec": 20.0, "enable_maintenance": True,
+        },
+    )
+    assert res.status_code == 200
+    body = res.json()
+    for event in body["maintenance_events"]:
+        assert event["event"] in ("down", "restored")
+        assert isinstance(event["vehicle_id"], int)

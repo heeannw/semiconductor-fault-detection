@@ -37,6 +37,8 @@ from .models import FaultRecord, ModelMetric, ProcessLog  # noqa: E402
 from .schemas import (  # noqa: E402
     AlertSendRequest,
     AlertSendResponse,
+    AmhsCongestionSample,
+    AmhsMaintenanceEvent,
     AmhsReplayResponse,
     AmhsSimulateRequest,
     AmhsSimulateResponse,
@@ -448,6 +450,16 @@ def amhs_simulate_replay(req: AmhsSimulateRequest):
     _validate_amhs_request(req)
     dispatch_policy = _resolve_amhs_dispatch_policy(req)
 
+    maintenance_log: list[dict] = []
+    maintenance_process = None
+    if req.enable_maintenance:
+        if not amhs.pm_model_available():
+            raise HTTPException(
+                status_code=503,
+                detail="예지보전 모델이 없습니다. notebooks/09_amhs_predictive_maintenance.ipynb를 먼저 실행하세요.",
+            )
+        maintenance_process = amhs.make_maintenance_process(maintenance_log=maintenance_log)
+
     result = amhs.run_simulation(
         n_vehicles=req.n_vehicles,
         n_foups=req.n_foups,
@@ -456,6 +468,7 @@ def amhs_simulate_replay(req: AmhsSimulateRequest):
         stocker_capacity=req.stocker_capacity,
         hot_lot_ratio=req.hot_lot_ratio,
         dispatch_policy=dispatch_policy,
+        maintenance_process=maintenance_process,
         seed=req.seed,
     )
 
@@ -476,14 +489,32 @@ def amhs_simulate_replay(req: AmhsSimulateRequest):
         AmhsStationOut(name=s.name, name_ko=s.name_ko, index=s.index)
         for s in sorted(amhs.STATIONS.values(), key=lambda s: s.index)
     ]
+    congestion_df = result["congestion_log"]
+    congestion = [
+        AmhsCongestionSample(
+            time=float(r["time"]),
+            station=r["station"],
+            queue_length=int(r["queue_length"]),
+            busy_vehicles=int(r["busy_vehicles"]),
+            under_maintenance_vehicles=int(r["under_maintenance_vehicles"]),
+        )
+        for r in (congestion_df.to_dict("records") if len(congestion_df) else [])
+    ]
+    maintenance_events = [
+        AmhsMaintenanceEvent(time=float(e["time"]), vehicle_id=int(e["vehicle_id"]), event=e["event"])
+        for e in maintenance_log
+    ]
 
     return AmhsReplayResponse(
         policy=req.policy,
         n_vehicles=req.n_vehicles,
         n_stations=len(stations),
+        stocker_capacity=req.stocker_capacity,
         sim_duration_sec=result["sim_duration_sec"],
         stations=stations,
         events=events,
+        congestion=congestion,
+        maintenance_events=maintenance_events,
     )
 
 

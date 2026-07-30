@@ -59,6 +59,14 @@ def requires_delay_model():
 
 
 @pytest.fixture
+def requires_pm_model():
+    from amhs.maintenance import pm_model_available
+
+    if not pm_model_available():
+        pytest.skip("AMHS 예지보전 모델이 없습니다. notebooks/09_amhs_predictive_maintenance.ipynb를 먼저 실행하세요.")
+
+
+@pytest.fixture
 def requires_fault_classifier():
     from simulator.fault_classifier import fault_classifier_available
 

@@ -38,6 +38,7 @@ export default function Amhs() {
   const [sensitivityResults, setSensitivityResults] = useState(null);
 
   const [replayPolicy, setReplayPolicy] = useState("nearest");
+  const [replayMaintenance, setReplayMaintenance] = useState(false);
   const [replayRunning, setReplayRunning] = useState(false);
   const [replayData, setReplayData] = useState(null);
 
@@ -86,6 +87,7 @@ export default function Amhs() {
     try {
       const result = await api.amhsSimulateReplay({
         nVehicles, nFoups, nLaps, stockerCapacity, hotLotRatio, policy: replayPolicy,
+        enableMaintenance: replayMaintenance,
       });
       setReplayData(result);
     } catch (e) {
@@ -138,7 +140,11 @@ export default function Amhs() {
       </div>
 
       <div className="card">
-        <p className="card-title">OHT 반송 애니메이션 (실시간 실행 결과)</p>
+        <p className="card-title">OHT 반송 애니메이션 (방금 실행한 시뮬레이션 재생)</p>
+        <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: -4, marginBottom: 12 }}>
+          실제로는 반송에 수십 분~수 시간이 걸리므로, 시뮬레이션 전체를 압축해 약 25초 안팎으로 재생합니다.
+          화면 하단의 "N초 / M초"는 실제 경과 시간이 아니라 시뮬레이션 내부 시간(초)이며, M초가 이번 실행이 끝난 시점입니다 — 재생 속도는 배속 버튼으로 조절할 수 있습니다.
+        </p>
         <div className="toolbar">
           <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
             디스패칭 정책
@@ -148,13 +154,23 @@ export default function Amhs() {
               ))}
             </select>
           </label>
+          <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13 }} title="유휴 차량을 주기적으로 점검해 예지보전 모델이 이상으로 판정하면 일정 시간 운행을 중단시킨다">
+            <input type="checkbox" checked={replayMaintenance} onChange={(e) => setReplayMaintenance(e.target.checked)} />
+            차량 고장(예지보전) 이벤트 포함
+          </label>
           <button onClick={runReplay} disabled={replayRunning}>
             {replayRunning ? "실행 중..." : "애니메이션 실행"}
           </button>
         </div>
         {replayData && (
           <div style={{ marginTop: 12 }}>
-            <AmhsAnimation stations={replayData.stations} events={replayData.events} />
+            <AmhsAnimation
+              stations={replayData.stations}
+              events={replayData.events}
+              congestion={replayData.congestion}
+              maintenanceEvents={replayData.maintenance_events}
+              stockerCapacity={replayData.stocker_capacity}
+            />
           </div>
         )}
       </div>

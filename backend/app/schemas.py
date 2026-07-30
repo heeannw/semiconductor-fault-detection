@@ -162,6 +162,7 @@ class AmhsSimulateRequest(BaseModel):
     stocker_capacity: int = 2
     hot_lot_ratio: float = 0.0
     policy: str = "nearest"  # "nearest" | "fcfs" | "zone" | "predictive"
+    enable_maintenance: bool = False
     seed: int = 42
 
 
@@ -194,10 +195,27 @@ class AmhsTransportEvent(BaseModel):
     is_hot_lot: bool
 
 
+class AmhsCongestionSample(BaseModel):
+    time: float
+    station: str
+    queue_length: int
+    busy_vehicles: int
+    under_maintenance_vehicles: int
+
+
+class AmhsMaintenanceEvent(BaseModel):
+    time: float
+    vehicle_id: int
+    event: str  # "down" | "restored"
+
+
 class AmhsReplayResponse(BaseModel):
     policy: str
     n_vehicles: int
     n_stations: int
+    stocker_capacity: int
     sim_duration_sec: float
     stations: list[AmhsStationOut]
     events: list[AmhsTransportEvent]
+    congestion: list[AmhsCongestionSample]
+    maintenance_events: list[AmhsMaintenanceEvent]

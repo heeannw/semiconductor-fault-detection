@@ -337,6 +337,109 @@ a {
   flex-shrink: 0;
 }
 
+/* AMHS OHT 애니메이션 좌측 차량 현황 패널 — AGV 플릿 대시보드류 UI 참고. */
+.amhs-fleet-layout {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.amhs-fleet-list {
+  width: 216px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.amhs-fleet-list-header {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  margin-bottom: 2px;
+}
+
+.amhs-fleet-item {
+  display: flex;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-2);
+}
+
+.amhs-fleet-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-top: 4px;
+  flex-shrink: 0;
+  background: var(--text-muted);
+}
+
+.amhs-fleet-dot-moving { background: var(--series-1); }
+.amhs-fleet-dot-hotlot { background: var(--series-2); }
+.amhs-fleet-dot-down { background: var(--status-critical); }
+.amhs-fleet-dot-idle { background: var(--text-muted); }
+
+.amhs-fleet-item-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.amhs-fleet-item-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.amhs-fleet-item-id {
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.amhs-fleet-bar-track {
+  height: 5px;
+  border-radius: 3px;
+  background: var(--gridline);
+  overflow: hidden;
+}
+
+.amhs-fleet-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: var(--series-1);
+  transition: width 0.2s ease;
+}
+
+.amhs-fleet-item-meta {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.amhs-fleet-canvas {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (max-width: 720px) {
+  .amhs-fleet-layout {
+    flex-direction: column;
+  }
+  .amhs-fleet-list {
+    width: 100%;
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .amhs-fleet-item {
+    flex: 1;
+    min-width: 160px;
+  }
+}
+
 .stat-tile .value {
   font-size: 28px;
   font-weight: 700;
@@ -367,6 +470,16 @@ a {
 .badge-critical {
   background: color-mix(in srgb, var(--status-critical) 15%, transparent);
   color: var(--status-critical);
+}
+
+.badge-warning {
+  background: color-mix(in srgb, var(--status-warning) 18%, transparent);
+  color: color-mix(in srgb, var(--status-warning) 70%, black);
+}
+
+.badge-muted {
+  background: color-mix(in srgb, var(--text-muted) 15%, transparent);
+  color: var(--text-muted);
 }
 
 .badge::before {

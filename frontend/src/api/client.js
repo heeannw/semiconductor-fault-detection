@@ -62,14 +62,15 @@ export const api = {
     }),
   amhsSimulateReplay: ({
     nVehicles = 5, nFoups = 8, nLaps = 1, foupLaunchIntervalSec = 150.0,
-    stockerCapacity = 2, hotLotRatio = 0.0, policy = "nearest", seed = 42,
+    stockerCapacity = 2, hotLotRatio = 0.0, policy = "nearest", enableMaintenance = false, seed = 42,
   }) =>
     request("/api/amhs/simulate/replay", {
       method: "POST",
       body: JSON.stringify({
         n_vehicles: nVehicles, n_foups: nFoups, n_laps: nLaps,
         foup_launch_interval_sec: foupLaunchIntervalSec,
-        stocker_capacity: stockerCapacity, hot_lot_ratio: hotLotRatio, policy, seed,
+        stocker_capacity: stockerCapacity, hot_lot_ratio: hotLotRatio, policy,
+        enable_maintenance: enableMaintenance, seed,
       }),
     }),
 };

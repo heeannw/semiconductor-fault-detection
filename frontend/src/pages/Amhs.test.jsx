@@ -12,12 +12,14 @@ vi.mock("../api/client.js", () => ({
 }));
 
 const FAKE_REPLAY = {
-  policy: "nearest", n_vehicles: 3, n_stations: 8, sim_duration_sec: 500,
+  policy: "nearest", n_vehicles: 3, n_stations: 8, sim_duration_sec: 500, stocker_capacity: 2,
   stations: Array.from({ length: 8 }, (_, i) => ({ name: `p${i}`, name_ko: `공정${i}`, index: i })),
   events: [
     { foup_id: 0, from_station: "p0", to_station: "p1", requested_at: 0, completed_at: 40, vehicle_id: 0, is_hot_lot: false },
     { foup_id: 0, from_station: "p1", to_station: "p2", requested_at: 40, completed_at: 80, vehicle_id: 1, is_hot_lot: true },
   ],
+  congestion: [],
+  maintenance_events: [],
 };
 
 const FAKE_RESULT = {
@@ -84,6 +86,21 @@ describe("Amhs page", () => {
       expect(api.amhsSimulateReplay).toHaveBeenCalledTimes(1);
     });
     expect(screen.getByRole("img", { name: "OHT 반송 애니메이션" })).toBeInTheDocument();
+  });
+
+  it("passes enable_maintenance=true to the replay API once the checkbox is checked", async () => {
+    api.amhsSimulateReplay.mockResolvedValue(FAKE_REPLAY);
+    const callsBefore = api.amhsSimulateReplay.mock.calls.length;
+    const user = userEvent.setup();
+    render(<Amhs />);
+
+    await user.click(screen.getByLabelText("차량 고장(예지보전) 이벤트 포함"));
+    await user.click(screen.getByRole("button", { name: "애니메이션 실행" }));
+
+    await waitFor(() => {
+      expect(api.amhsSimulateReplay.mock.calls.length).toBe(callsBefore + 1);
+    });
+    expect(api.amhsSimulateReplay.mock.calls.at(-1)[0].enableMaintenance).toBe(true);
   });
 
   it("shows a partial result and an error banner when one policy call fails", async () => {
