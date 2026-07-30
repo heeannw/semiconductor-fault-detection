@@ -3,6 +3,7 @@ import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxi
 import { api } from "../api/client.js";
 import { useAsync } from "../hooks/useAsync.js";
 import ProcessCard from "../components/ProcessCard.jsx";
+import ProcessFlowMap from "../components/ProcessFlowMap.jsx";
 import StatTile from "../components/StatTile.jsx";
 
 const PROCESS_ORDER = [
@@ -95,6 +96,8 @@ export default function Dashboard() {
         ) : sortedStatus.length === 0 ? (
           <div className="empty-state">아직 공정 데이터가 없습니다.</div>
         ) : (
+          <>
+          <ProcessFlowMap logs={sortedStatus} />
           <div className="status-split">
             <div className="status-column">
               <div className="status-column-header">
@@ -127,6 +130,7 @@ export default function Dashboard() {
               )}
             </div>
           </div>
+          </>
         )}
       </div>
     </>

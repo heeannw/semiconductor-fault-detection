@@ -66,8 +66,8 @@ describe("Simulator page", () => {
     await user.click(screen.getByRole("button", { name: "데이터 생성" }));
 
     await waitFor(() => {
-      expect(screen.getByText("식각")).toBeInTheDocument();
-      expect(screen.getByText("산화")).toBeInTheDocument();
+      expect(screen.getAllByText("식각").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("산화").length).toBeGreaterThan(0);
     });
     expect(screen.getAllByText("1건").length).toBe(2); // 정상 1건, 이상 1건 둘 다 "1건"
   });

@@ -54,7 +54,7 @@ describe("Dashboard", () => {
     renderDashboard();
 
     await waitFor(() => {
-      expect(screen.getByText("식각")).toBeInTheDocument();
+      expect(screen.getAllByText("식각").length).toBeGreaterThan(0);
     });
   });
 
@@ -72,8 +72,8 @@ describe("Dashboard", () => {
     const { container } = renderDashboard();
 
     await waitFor(() => {
-      expect(screen.getByText("식각")).toBeInTheDocument();
-      expect(screen.getByText("산화")).toBeInTheDocument();
+      expect(screen.getAllByText("식각").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("산화").length).toBeGreaterThan(0);
     });
     const columns = container.querySelectorAll(".status-column");
     expect(columns.length).toBe(2);

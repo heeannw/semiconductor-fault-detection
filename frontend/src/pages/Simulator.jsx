@@ -2,6 +2,7 @@ import { useState } from "react";
 import { api } from "../api/client.js";
 import { useAsync } from "../hooks/useAsync.js";
 import ProcessCard from "../components/ProcessCard.jsx";
+import ProcessFlowMap from "../components/ProcessFlowMap.jsx";
 
 const PROCESSES = [
   { key: "all", label: "전체 8대 공정" },
@@ -97,6 +98,7 @@ export default function Simulator() {
       {latest.length > 0 && (
         <div className="card">
           <p className="card-title">방금 생성된 데이터</p>
+          <ProcessFlowMap logs={latest} />
           <div className="status-split">
             <div className="status-column">
               <div className="status-column-header">
